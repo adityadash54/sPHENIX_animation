@@ -5,11 +5,18 @@ import json
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
+import array
 
 f=open('TRACKS2.json') #else use the folder option on the left column and upload the file manually
 data_json=json.load(f)
 print(data_json)
 f.close()
+
+#User defined values
+drift_speed=[0.0,0.0,1.0]
+no_tracks=5 #number of tracks to animate it will start from track 1
+
+
 
 dict_json = data_json.items()
 numpy_array_json = np.array(list(dict_json))
@@ -22,29 +29,52 @@ print("mom_dict=",mom_dict)
 print("innertracker_arr=",innertracker_arr)
 
 #Getting the cluster positions of a track
-x_y_z_dict=innertracker_arr[1] #innertracker_arr[i] reads the ith track
-x_y_z_clusters=np.array(x_y_z_dict['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
+x_y_z_clusters=[]
+lentrack1=0
+for track_no in range(no_tracks):
+    x_y_z_dict_track=innertracker_arr[track_no] #innertracker_arr[i] reads the ith track
+    x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
+    #for jj in range(len(x_y_z_clusters_track)):
+        #x_y_z_clusters.append(x_y_z_clusters_track[jj])
+    print("x_y_z_clusters_track[0]=")
+    print(x_y_z_clusters_track[0])
+    
+    if(track_no==0):
+        x_y_z_clusters=x_y_z_clusters_track
+        print("track_no==0, x_y_z_clusters[0]=")
+        print(x_y_z_clusters[0])
+        lentrack1=len(x_y_z_clusters_track)
+    
+    else:
+        x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
+        print("track_no!=0, x_y_z_clusters[lentrack1]=")
+        print(x_y_z_clusters[lentrack1])
+
+    print("shape of x_y_z clusters=")
+    print(x_y_z_clusters.shape)
+    
+        
+        
 #cluster_positions=pd.DataFrame.from_dict(x_y_z_clusters) #not required but makes visualisation easier
 #cluster_positions.columns=['x','y','z']
 
-print(innertracker_arr[1])
-print(x_y_z_clusters)
+#print(innertracker_arr[1])
+#print(x_y_z_clusters)
 #print(cluster_positions)
 
 
 #ANIMATION
 #based on https://medium.com/@pnpsegonne/animating-a-3d-scatterplot-with-matplotlib-ca4b676d4b55
 
-drift_speed=[0.0,0.0,1.0]
 start_speed = np.zeros(x_y_z_clusters.shape)
 
 
 for jj in range(len(start_speed)):
   start_speed[jj]=drift_speed
 
-print(start_speed)
+#print(start_speed)
 data = [x_y_z_clusters]
-nbr_iterations=5
+nbr_iterations=10
 for iteration in range(nbr_iterations):
         previous_positions = data[-1]
         new_positions = previous_positions + start_speed
@@ -107,7 +137,7 @@ def main(data, save=False):
     ax.set_zlim3d([-100, 100])
     ax.set_zlabel('Z')
 
-    ax.set_title('3D Animated Scatter Example')
+    ax.set_title('Track drifting in TPC')
 
     # Provide starting angle for the view.
     ax.view_init(25, 10)
