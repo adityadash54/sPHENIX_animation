@@ -88,7 +88,8 @@ def main(data, save=False):
 
     # Attaching 3D axis to the figure
     fig = plt.figure()
-    ax = p3.Axes3D(fig)
+    ax = fig.add_subplot(111, projection='3d')
+    #ax = p3.Axes3D(fig)
 
     # Initialize scatters
     scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:]) for i in range(data[0].shape[0]) ]
@@ -97,13 +98,13 @@ def main(data, save=False):
     iterations = len(data)
 
     # Setting the axes properties
-    ax.set_xlim3d([-50, 50])
+    ax.set_xlim3d([-100, 100])
     ax.set_xlabel('X')
 
-    ax.set_ylim3d([-50, 50])
+    ax.set_ylim3d([-100, 100])
     ax.set_ylabel('Y')
 
-    ax.set_zlim3d([-50, 50])
+    ax.set_zlim3d([-100, 100])
     ax.set_zlabel('Z')
 
     ax.set_title('3D Animated Scatter Example')
@@ -112,12 +113,15 @@ def main(data, save=False):
     ax.view_init(25, 10)
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
-                                       interval=50, blit=False, repeat=True)
+                                       interval=1000/iterations, blit=False, repeat=True)
 
     if save:
-        f = r"animations/animation_new.gif"
-        writergif = animation.PillowWriter(fps=30)
-        ani.save(f, writer=writergif)
+        ani.save('Animated_tracks.mp4',writer='ffmpeg',fps=iterations)
+        #ani.save('Animated_tracks.gif',writer='Pillow',fps=iterations)
+        
+        #Writer = animation.writers['ffmpeg']
+        #writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
+        #ani.save('3d-scatted-animated.mp4', writer=writer)
 
     plt.show()
 
