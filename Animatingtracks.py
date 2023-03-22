@@ -15,7 +15,7 @@ f.close()
 #User defined values
 drift_speed_posz=np.array([0.0,0.0,1.0])
 drift_speed_negz=np.array([0.0,0.0,-1.0])
-no_tracks=10 #number of tracks to animate it will start from track 1
+no_tracks=20 #number of tracks to animate it will start from track 1
 
 
 
@@ -159,7 +159,7 @@ def main(data, save=False):
     ax.set_title('Track drifting in TPC')
 
     # Provide starting angle for the view.
-    ax.view_init(25, 10)
+    ax.view_init(25, 90,0,'y')
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
                                        interval=1000/iterations, blit=False, repeat=True)
