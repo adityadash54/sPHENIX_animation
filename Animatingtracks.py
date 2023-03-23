@@ -13,9 +13,9 @@ data_json=json.load(f)
 f.close()
 
 #User defined values
-drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
-drift_speed_negz=np.array([0.0,0.0,-0.8])
-no_tracks=2 #number of tracks to animate it will start from track 1
+drift_speed_posz=np.array([0.0,0.0,1.6]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 10^-5 i.e. in animation speed is 0.08cm/millisecond
+drift_speed_negz=np.array([0.0,0.0,-1.6])
+no_tracks=20 #number of tracks to animate it will start from track 1
 
 
 
@@ -73,18 +73,19 @@ data = [x_y_z_clusters]
 nbr_iterations=100
 for iteration in range(nbr_iterations):
         previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
+        previous_positions=previous_positions[abs(previous_positions[:,2])<105]
         new_positions=np.copy(previous_positions) #initialisation
         
         for jj in range(len(previous_positions)):
-            if(previous_positions[jj][2]>0):
+            if(previous_positions[jj][2]>0 and previous_positions[jj][2]<105):
                 new_positions[jj] = previous_positions[jj] + drift_speed_posz
-            elif(previous_positions[jj][2]<0):
+            elif(previous_positions[jj][2]<0 and previous_positions[jj][2]>-105):
                 #print(new_positions[jj])
                 new_positions[jj] = previous_positions[jj] + drift_speed_negz
                 #print("negz")
                 #print(new_positions[jj])
-            else:
-                print("Track found with z postion exactly equal to 0, it stays there")
+            #else:
+                #print("Track found with z postion exactly equal to 0 or reached endcap, it stays there")
         #print("new positions")
         #print(new_positions)
         data.append(new_positions)
@@ -108,7 +109,7 @@ def animate_scatters(iteration, data, scatters):
 #    Returns:
 #        list: List of scatters (One per element) with new coordinates
 #    """
-    for i in range(data[0].shape[0]):
+    for i in range(data[iteration].shape[0]):
         scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
         #if(iteration==1):
          #   if(i==1):
@@ -162,10 +163,10 @@ def main(data, save=False):
     ax.set_ylim3d([-100, 100])
     ax.set_ylabel('Y')
 
-    ax.set_zlim3d([-100, 100])
+    ax.set_zlim3d([-120, 120])
     ax.set_zlabel('Z')
 
-    ax.set_title('Clusters drifting in TPC (speed scaled by 5*10^(-6)')
+    ax.set_title('Clusters drifting in TPC (speed scaled by 5*10^(-6))')
 
     # Provide starting angle for the view.
     ax.view_init(25, 90,0,'y')
