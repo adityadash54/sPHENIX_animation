@@ -13,12 +13,12 @@ data_json=json.load(f)
 f.close()
 
 #User defined values
-drift_speed_posz=np.array([0.0,0.0,1.6]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 10^-5 i.e. in animation speed is 0.08cm/millisecond
-drift_speed_negz=np.array([0.0,0.0,-1.6])
-no_tracks=2 #number of tracks to animate it will start from track 1
+drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.08cm/millisecond
+drift_speed_negz=np.array([0.0,0.0,-0.8])
+no_tracks=20 #number of tracks to animate it will start from track 1
 
 
-
+print("Reading data from json file")
 dict_json = data_json.items()
 numpy_array_json = np.array(list(dict_json))
 mom_dict=numpy_array_json[3][1] #only works for this format the 3rd row is TRACKS and and 1 refers to INNERTRACKER
@@ -29,6 +29,7 @@ innertracker_arr=mom_dict['INNERTRACKER'] #stores the tracks information as an a
 #print("mom_dict=",mom_dict)
 #print("innertracker_arr=",innertracker_arr)
 
+print("Reading clusters")
 #Getting the cluster positions of a track
 x_y_z_clusters=[]
 for track_no in range(no_tracks):
@@ -50,8 +51,8 @@ for track_no in range(no_tracks):
         #print("track_no!=0, x_y_z_clusters["+str(lentrack1)+"]=")
         #print(x_y_z_clusters[lentrack1])
 
-    print("shape of x_y_z clusters=")
-    print(x_y_z_clusters.shape)
+    #print("shape of x_y_z clusters=")
+    #print(x_y_z_clusters.shape)
     
         
         
@@ -62,7 +63,7 @@ for track_no in range(no_tracks):
 #print(x_y_z_clusters)
 #print(cluster_positions)
 
-
+print("Generating data for animation")
 #ANIMATION
 #based on https://medium.com/@pnpsegonne/animating-a-3d-scatterplot-with-matplotlib-ca4b676d4b55
 #We can do this faster by separating the clusters with z>0 and z<0 and rearranging the cluster with z>0 on top of z<0 then we do not need to check if z>0 for every iteration
@@ -89,19 +90,19 @@ for iteration in range(nbr_iterations):
         #print("new positions")
         #print(new_positions)
         new_positions=new_positions[abs(new_positions[:,2])<105] #retaining only the clusters inside TPC
+        data.append(new_positions) #this is intentional the last array should have size 0 for animation to remove all clusters outside TPC
         if(len(new_positions)==0):
             break
-        data.append(new_positions)
-        print(data)
+        
 
         #if(iteration<5):
         #  print("previous_positions=")
         #  print(previous_positions)
         #  print("new_positions=")
         #  print(new_positions)
-
+#print(data)
         
-
+print("Animation starting!")
 def animate_scatters(iteration, data, scatters):
 #    """
 #    Update the data held by the scatter plot and therefore animates it.
@@ -116,7 +117,7 @@ def animate_scatters(iteration, data, scatters):
         if(i<data[iteration].shape[0]):
             scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
         else:
-            scatters[i]._offsets3d = ([0], [0], [-150])
+            scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
         #if(iteration==1):
          #   if(i==1):
          #       print(data[iteration][i,0:1])
@@ -158,38 +159,43 @@ def main(data, save=False):
 
     # Initialize scatters
     scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:]) for i in range(data[0].shape[0]) ]
-
+    print("Plot initialized")
     # Number of iterations
     iterations = len(data)
 
     # Setting the axes properties
-    ax.set_xlim3d([-200, 200])
+    ax.set_xlim3d([-120, 120])
     ax.set_xlabel('X')
 
-    ax.set_ylim3d([-200, 200])
+    ax.set_ylim3d([-120, 120])
     ax.set_ylabel('Y')
 
-    ax.set_zlim3d([-200, 200])
+    ax.set_zlim3d([-120, 120])
     ax.set_zlabel('Z')
 
     ax.set_title('Clusters drifting in TPC (speed scaled by 5*10^(-6))')
 
     # Provide starting angle for the view.
-    ax.view_init(25, 90,0,'y')
+    ax.view_init(20, 30,0,'y')
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
-                                       interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
+                                       interval=1, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
 
     if save:
-        ani.save('Animated_tracks.mp4',writer='ffmpeg',fps=50)
+        print("Saving animation as Animated_clusters.mp4")
+        ani.save('Animated_clusters.mp4',writer='ffmpeg',fps=50)
         #ani.save('Animated_tracks.gif',writer='Pillow',fps=iterations)
         
         #Writer = animation.writers['ffmpeg']
         #writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
         #ani.save('3d-scatted-animated.mp4', writer=writer)
-
+        print("Animation saved")
     plt.show()
 
 
 #print(data)
-main(data, save=True)
+#Saving takes a long time so use Save=True only when necessary
+#increase drift_speed_posz and drift_speed_negz if desired
+main(data, save=False)
+
+
