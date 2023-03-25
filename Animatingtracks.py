@@ -1,19 +1,102 @@
 #Reading the json file
 import numpy as np
-#import pandas as pd
 import json
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import array
-import math
+
+#/*************************************************************/
+#/*              TPC Cluster Drift Animator                  */
+#/*         Aditya Prasad Dash, Thomas Marshall              */
+#/*      aditya55@physics.ucla.edu, rosstom@ucla.edu         */
+#/*************************************************************/
+#Code in python
+#Input:
+# json file containing TPC clusters
+#Output:
+# Animation of drifting of TPC clusters with user defined speed and option to save in .mp4 format
+
+def TPC_surface(inner_radius,outer_radius, height_z):
+    ngridpoints=30
+    z = np.linspace(-height_z, height_z, ngridpoints)
+    phi = np.linspace(0, 2*np.pi, ngridpoints)
+    phi_grid, z_grid=np.meshgrid(phi, z)
+    x_grid_inner = inner_radius*np.cos(phi_grid)
+    y_grid_inner = inner_radius*np.sin(phi_grid)
+    x_grid_outer = outer_radius*np.cos(phi_grid)
+    y_grid_outer = outer_radius*np.sin(phi_grid)
+    
+    return x_grid_inner,y_grid_inner,x_grid_outer,y_grid_outer,z_grid
 
 def raddist_cluster(cluster_pos):
-    print(cluster_pos)
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
-    print(radius)
     return radius
     
+def animate_scatters(iteration, data, scatters):   #adapted from https://medium.com/@pnpsegonne/animating-a-3d-scatterplot-with-matplotlib-ca4b676d4b55
+#    Input:
+#        iteration (int): Current iteration of the animation
+#        data (list): List of the data positions at each iteration.
+#        scatters (list): List of all the scatters (One per element)
+#    Returns:
+#        list: List of scatters (One per element) with new coordinates
+
+    for i in range(data[0].shape[0]):
+        if(i<data[iteration].shape[0]):
+            scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
+        else:
+            scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
+        
+    return scatters
+
+
+def animate_clusters(data, save=False):
+#    Input:
+#        data (list): List of the cluster positions at each iteration.
+#        save (bool): Option to save the recording of the animation. (Default is False).
+#    Output:
+#        Animates the clusters, plots it and saves it if save=True
+
+    # Attaching 3D axis to the figure
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #Drawing TPC
+    Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
+    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.3)
+    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.3)
+    
+    # Initialize scatters
+    scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:]) for i in range(data[0].shape[0]) ]
+    print("Plot initialized")
+    # Number of iterations
+    iterations = len(data)
+
+    # Setting the axes properties
+    ax.set_xlim3d([-120, 120])
+    ax.set_xlabel('X')
+
+    ax.set_ylim3d([-120, 120])
+    ax.set_ylabel('Y')
+
+    ax.set_zlim3d([-120, 120])
+    ax.set_zlabel('Z')
+
+    ax.set_title('Clusters drifting in TPC (speed scaled by $5*10^{-6}$)')
+
+    # Provide starting angle for the view.
+    ax.view_init(20, 30,0,'y')
+
+    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
+                                       interval=1, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
+
+    if save:
+        print("Saving animation as Animated_clusters.mp4")
+        ani.save('Animated_clusters.mp4',writer='ffmpeg',fps=50)
+        
+        print("Animation saved")
+    plt.show()
+
+# Main Program starts from here
 print("Reading json file")
 f=open('TRACKS2_21March.json')
 data_json=json.load(f)
@@ -22,7 +105,8 @@ f.close()
 #User defined values
 drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
 drift_speed_negz=np.array([0.0,0.0,-0.8])
-no_tracks=1 #number of tracks to animate it will start from track 1
+
+no_tracks=20 #number of tracks to animate it will start from track 1
 
 
 print("Reading data from json file")
@@ -38,15 +122,14 @@ x_y_z_clusters=np.array([])
 for track_no in range(no_tracks):
     x_y_z_dict_track=innertracker_arr[track_no].copy() #innertracker_arr[i] reads the ith track
     x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
-    
     x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track)>30]
+    
     if(track_no==0):
         x_y_z_clusters=np.copy(x_y_z_clusters_track)
     
     else:
         x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
 
-print(x_y_z_clusters)
 
 #cluster_positions=pd.DataFrame.from_dict(x_y_z_clusters) #not required but makes visualisation easier
 #cluster_positions.columns=['x','y','z']
@@ -75,91 +158,9 @@ for iteration in range(nbr_iterations):
         
         
 print("Animation starting!")
-def animate_scatters(iteration, data, scatters):    #[1]
-#    """
-#    Update the data held by the scatter plot and therefore animates it.
-#    Input:
-#        iteration (int): Current iteration of the animation
-#        data (list): List of the data positions at each iteration.
-#        scatters (list): List of all the scatters (One per element)
-#    Returns:
-#        list: List of scatters (One per element) with new coordinates
-#    """
-    for i in range(data[0].shape[0]):
-        if(i<data[iteration].shape[0]):
-            scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
-        else:
-            scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
-        
-    return scatters
 
-def TPC_surface(center_x,center_y,inner_radius,outer_radius, height_z): #[2]
-    ngridpoints=30
-    z = np.linspace(-height_z, height_z, ngridpoints)
-    phi = np.linspace(0, 2*np.pi, ngridpoints)
-    phi_grid, z_grid=np.meshgrid(phi, z)
-    x_grid_inner = inner_radius*np.cos(phi_grid) + center_x
-    y_grid_inner = inner_radius*np.sin(phi_grid) + center_y
-    x_grid_outer = outer_radius*np.cos(phi_grid) + center_x
-    y_grid_outer = outer_radius*np.sin(phi_grid) + center_y
-    
-    return x_grid_inner,y_grid_inner,x_grid_outer,y_grid_outer,z_grid
-
-
-def main(data, save=False):
-#    """
-#    Plots the 3D figure and animates it.
-#    Input:
-#        data (list): List of the cluster positions at each iteration.
-#        save (bool): Option to save the recording of the animation. (Default is False).
-#    """
-
-    # Attaching 3D axis to the figure
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    #Drawing TPC
-    Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(0.0,0.0,20,80,105)
-    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.3)
-    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.3)
-    
-    # Initialize scatters
-    scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:]) for i in range(data[0].shape[0]) ]
-    print("Plot initialized")
-    # Number of iterations
-    iterations = len(data)
-
-    # Setting the axes properties
-    ax.set_xlim3d([-120, 120])
-    ax.set_xlabel('X')
-
-    ax.set_ylim3d([-120, 120])
-    ax.set_ylabel('Y')
-
-    ax.set_zlim3d([-120, 120])
-    ax.set_zlabel('Z')
-
-    ax.set_title('Clusters drifting in TPC (speed scaled by $5*10^(-6)$)')
-
-    # Provide starting angle for the view.
-    ax.view_init(20, 30,0,'y')
-
-    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
-                                       interval=1, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
-
-    if save:
-        print("Saving animation as Animated_clusters.mp4")
-        ani.save('Animated_clusters.mp4',writer='ffmpeg',fps=50)
-        
-        print("Animation saved")
-    plt.show()
-
-
-#print(data)
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
-main(data, save=True)
+animate_clusters(data, save=True)
 
 
-#References
-#1) https://medium.com/@pnpsegonne/animating-a-3d-scatterplot-with-matplotlib-ca4b676d4b55
-#2) #https://stackoverflow.com/questions/26989131/add-cylinder-to-plot
