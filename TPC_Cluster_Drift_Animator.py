@@ -16,9 +16,9 @@ import array
 #Output:
 # Animation of drifting of TPC clusters with user defined speed and option to save in .mp4 format
 
-def TPC_surface(inner_radius,outer_radius, height_z):
+def TPC_surface(inner_radius,outer_radius, length_z):
     ngridpoints=30
-    z = np.linspace(-height_z, height_z, ngridpoints)
+    z = np.linspace(-length_z, length_z, ngridpoints)
     phi = np.linspace(0, 2*np.pi, ngridpoints)
     phi_grid, z_grid=np.meshgrid(phi, z)
     x_grid_inner = inner_radius*np.cos(phi_grid)
@@ -86,7 +86,7 @@ def animate_clusters(data, save=False):
     ax.view_init(20, 30,0,'y')
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
-                                       interval=1, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
+                                       interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
 
     if save:
         print("Saving animation as Animated_clusters.mp4")
@@ -102,7 +102,7 @@ data_json=json.load(f)
 f.close()
     
 #User defined values
-drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
+drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
 drift_speed_negz=np.array([0.0,0.0,-0.8])
 
 no_tracks=20 #number of tracks to animate it will start from track 1
@@ -130,10 +130,6 @@ for track_no in range(no_tracks):
         x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
 
 
-#cluster_positions=pd.DataFrame.from_dict(x_y_z_clusters) #not required but makes visualisation easier
-#cluster_positions.columns=['x','y','z']
-
-
 print("Generating data for animation")
 
 #ANIMATION
@@ -151,7 +147,7 @@ for iteration in range(nbr_iterations):
                 new_positions[jj] = previous_positions[jj] + drift_speed_negz
                 
         new_positions=new_positions[abs(new_positions[:,2])<105] #retaining only the clusters inside TPC
-        data.append(new_positions) #this is intentional the last array should have size 0 for animation to remove all clusters outside TPC
+        data.append(new_positions) #the last array should have size 0 for animation to remove all clusters outside TPC
         if(len(new_positions)==0):
             break
         
