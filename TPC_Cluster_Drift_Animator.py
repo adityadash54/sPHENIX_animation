@@ -1,6 +1,9 @@
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+import pandas as pd
+import uproot
+import awkward as ak
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import array
@@ -97,9 +100,6 @@ def animate_clusters(data, save=False):
 
 # Main Program starts from here
 print("Reading json file")
-f=open('TRACKS2_21March.json')
-data_json=json.load(f)
-f.close()
     
 #User defined values
 drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
@@ -107,32 +107,54 @@ drift_speed_negz=np.array([0.0,0.0,-0.8])
 
 no_tracks=20 #number of tracks to animate it will start from track 1
 
+def read_cluster_pos(inFile):
+    if inFile.lower().endswith('.json'):
+        print("Reading data from json file")
+        file=open(inFile)
+        data_json=json.load(file)
+        file.close()
+        dict_json = data_json.items()
+        numpy_array_json = np.array(list(dict_json))
+        mom_dict=numpy_array_json[3][1] #only works for this format the 3rd row is TRACKS and and 1 refers to INNERTRACKER
+        innertracker_arr=mom_dict['INNERTRACKER'] #stores the tracks information as an array
 
-print("Reading data from json file")
-dict_json = data_json.items()
-numpy_array_json = np.array(list(dict_json))
-mom_dict=numpy_array_json[3][1] #only works for this format the 3rd row is TRACKS and and 1 refers to INNERTRACKER
-innertracker_arr=mom_dict['INNERTRACKER'] #stores the tracks information as an array
 
-
-print("Reading clusters")
-#Getting the cluster positions of a track
-x_y_z_clusters=np.array([])
-for track_no in range(no_tracks):
-    x_y_z_dict_track=innertracker_arr[track_no].copy() #innertracker_arr[i] reads the ith track
-    x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
-    x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track)>30]
+        print("Reading clusters")
+        #Getting the cluster positions of a track
+        x_y_z_clusters=np.array([])
+        for track_no in range(no_tracks):
+            x_y_z_dict_track=innertracker_arr[track_no].copy() #innertracker_arr[i] reads the ith track
+            x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
+            x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track)>30]
     
-    if(track_no==0):
-        x_y_z_clusters=np.copy(x_y_z_clusters_track)
+            if(track_no==0):
+                x_y_z_clusters=np.copy(x_y_z_clusters_track)
     
-    else:
-        x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
+            else:
+                x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
+        return x_y_z_clusters
 
+    if inFile.lower().endswith('.root'):
+        print("Reading data from root file")
+        file = uproot.open(inFile)
+        ntp_cluster_tree=file['ntp_cluster']
+        branches=ntp_cluster_tree.arrays(["x","y","z","gvt"])
+        print("Reading clusters")
+        x_y_z_clusters=np.array([])
+        for cluster in range(len(branches)):#range(len(branches)):
+            x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z']]])
+            if(cluster==0):
+                x_y_z_clusters=np.copy(x_y_z_clusters_track)
+    
+            else:
+                x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
 
+        return x_y_z_clusters
+        
 print("Generating data for animation")
 
 #ANIMATION
+x_y_z_clusters=read_cluster_pos("TRACKS2_21March.json")
 data = [x_y_z_clusters]
         
 nbr_iterations=1000
@@ -156,6 +178,6 @@ print("Animation starting!")
 
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
-animate_clusters(data, save=True)
+animate_clusters(data, save=False)
 
 
