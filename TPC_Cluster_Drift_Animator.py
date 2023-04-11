@@ -105,8 +105,6 @@ print("Reading json file")
 drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
 drift_speed_negz=np.array([0.0,0.0,-0.8])
 
-no_tracks=20 #number of tracks to animate it will start from track 1
-
 def read_cluster_pos(inFile):
     if inFile.lower().endswith('.json'):
         print("Reading data from json file")
@@ -118,12 +116,15 @@ def read_cluster_pos(inFile):
         mom_dict=numpy_array_json[3][1] #only works for this format the 3rd row is TRACKS and and 1 refers to INNERTRACKER
         innertracker_arr=mom_dict['INNERTRACKER'] #stores the tracks information as an array
 
-
+        #print(innertracker_arr)
         print("Reading clusters")
         #Getting the cluster positions of a track
         x_y_z_clusters=np.array([])
+        no_tracks=len(innertracker_arr) #set no_tracks=10 for testing
+        
         for track_no in range(no_tracks):
             x_y_z_dict_track=innertracker_arr[track_no].copy() #innertracker_arr[i] reads the ith track
+            print(x_y_z_dict_track['pts'])
             x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
             x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track)>30]
     
@@ -154,7 +155,7 @@ def read_cluster_pos(inFile):
 print("Generating data for animation")
 
 #ANIMATION
-x_y_z_clusters=read_cluster_pos("TRACKS2_21March.json")
+x_y_z_clusters=read_cluster_pos("Data_files/TRACKSevent4.json")
 data = [x_y_z_clusters]
         
 nbr_iterations=1000
