@@ -45,7 +45,11 @@ def animate_scatters(iteration, data, scatters):   #adapted from https://medium.
 
     for i in range(data[0].shape[0]):
         if(i<data[iteration].shape[0]):
-            scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
+            if(iteration>data[iteration][i,4]): #and iteration>data[iteration][i,2:3]<105):
+                scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
+            else:
+                scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
+            
         else:
             scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
         
@@ -68,7 +72,8 @@ def animate_clusters(data, save=False):
     ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.3)
     
     # Initialize scatters
-    scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:]) for i in range(data[0].shape[0]) ]
+    scatters = [ ax.scatter([100],[-100],[100]) for i in range(data[0].shape[0])]
+    #scatters = [ ax.scatter(data[0][i,0:1], data[0][i,1:2], data[0][i,2:3]) for i in range(data[0].shape[0])]
     print("Plot initialized")
     # Number of iterations
     iterations = len(data)
@@ -102,8 +107,8 @@ def animate_clusters(data, save=False):
 #print("Reading json file")
     
 #User defined values
-drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/microsecond
-drift_speed_negz=np.array([0.0,0.0,-0.8])
+drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/microsecond
+drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0]) #(x,y,z,event,gvt)
 
 def read_cluster_pos(inFile):
     if inFile.lower().endswith('.json'):
@@ -139,7 +144,7 @@ def read_cluster_pos(inFile):
         print("Reading data from root file")
         file = uproot.open(inFile)
         ntp_cluster_tree=file['ntp_cluster']
-        branches=ntp_cluster_tree.arrays(["x","y","z","gvt"])
+        branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
@@ -148,9 +153,11 @@ def read_cluster_pos(inFile):
         for cluster in range(len(branches)):#range(len(branches)):
             #if(branches[cluster]['gvt']==0):
             #    continue
-            x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z']]])
-            gvt_clusters_track=np.array([[branches[cluster]['gvt']]])
-            gvt_clusters_track=gvt_clusters_track
+            branches[cluster]['gvt']=branches[cluster]['event']*5000
+            x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z'],branches[cluster]['event'],branches[cluster]['gvt']]])
+            #gvt_clusters_track=np.array([[branches[cluster]['gvt']]])
+            gvt_clusters_track=np.array([[branches[cluster]['event']]])*50000
+            #gvt_clusters_track=gvt_clusters_track
             if(cluster==0):
                 x_y_z_clusters_run=np.copy(x_y_z_clusters_track)
                 gvt_clusters_run=np.copy(gvt_clusters_track)
@@ -169,6 +176,7 @@ gvt_clusters=gvt_clusters/(20*10^6) #20ms is the time per iterations so this is 
 data = [x_y_z_clusters]
 print(data)
 print(gvt_clusters)
+
 #print(True and gvt_clusters[0]*3>1000)
 nbr_iterations=1000
 for iteration in range(nbr_iterations):
@@ -176,6 +184,8 @@ for iteration in range(nbr_iterations):
         new_positions=np.copy(previous_positions) #initialisation
         
         for jj in range(len(previous_positions)):
+            #if jj>len(previous_positions)/2.0:
+             #   gvt_clusters[jj]=500
             if(previous_positions[jj][2]>0 and iteration>gvt_clusters[jj]):
                 new_positions[jj] = previous_positions[jj] + drift_speed_posz
             elif(previous_positions[jj][2]<0 and iteration>gvt_clusters[jj]):
@@ -194,3 +204,6 @@ print("Animation starting!")
 animate_clusters(data, save=False)
 
 
+#ntp_cluster->event and gtrack_id
+#go to ntp_gtrack and select track with same event and gtrack_id
+#grab gvt from gtrack_id and assign to cluster
