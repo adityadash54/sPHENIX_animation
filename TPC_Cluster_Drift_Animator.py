@@ -99,7 +99,7 @@ def animate_clusters(data, save=False):
     plt.show()
 
 # Main Program starts from here
-print("Reading json file")
+#print("Reading json file")
     
 #User defined values
 drift_speed_posz=np.array([0.0,0.0,0.8]) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 0.04cm/millisecond
@@ -140,33 +140,42 @@ def read_cluster_pos(inFile):
         file = uproot.open(inFile)
         ntp_cluster_tree=file['ntp_cluster']
         branches=ntp_cluster_tree.arrays(["x","y","z","gvt"])
+        branches=branches[~np.isnan(branches.gvt)]
         print("Reading clusters")
-        x_y_z_clusters=np.array([])
-        for cluster in range(len(branches)):#range(len(branches)):
+        x_y_z_clusters_run=np.array([])
+        gvt_clusters_run=np.array([])
+        
+        for cluster in range(100):#range(len(branches)):#range(len(branches)):
+            #if(branches[cluster]['gvt']==0):
+            #    continue
             x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z']]])
+            gvt_clusters_track=np.array([[branches[cluster]['gvt']]])
             if(cluster==0):
-                x_y_z_clusters=np.copy(x_y_z_clusters_track)
+                x_y_z_clusters_run=np.copy(x_y_z_clusters_track)
+                gvt_clusters_run=np.copy(gvt_clusters_track)
     
             else:
-                x_y_z_clusters=np.append(x_y_z_clusters,x_y_z_clusters_track,axis=0)
-
-        return x_y_z_clusters
+                x_y_z_clusters_run=np.append(x_y_z_clusters_run,x_y_z_clusters_track,axis=0)
+                gvt_clusters_run=np.append(gvt_clusters_run,gvt_clusters_track,axis=0)
+        return x_y_z_clusters_run,gvt_clusters_run
         
 print("Generating data for animation")
 
 #ANIMATION
-x_y_z_clusters=read_cluster_pos("Data_files/TRACKSevent4.json")
+x_y_z_clusters,gvt_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_gvt.root")
 data = [x_y_z_clusters]
-        
+print(data)
+print(gvt_clusters)
+print(True and gvt_clusters[0]*3>1000)
 nbr_iterations=1000
 for iteration in range(nbr_iterations):
         previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
         new_positions=np.copy(previous_positions) #initialisation
         
         for jj in range(len(previous_positions)):
-            if(previous_positions[jj][2]>0):
+            if(previous_positions[jj][2]>0 and gvt_clusters[jj]*iteration>1000):
                 new_positions[jj] = previous_positions[jj] + drift_speed_posz
-            elif(previous_positions[jj][2]<0):
+            elif(previous_positions[jj][2]<0 and gvt_clusters[jj]*iteration>1000):
                 new_positions[jj] = previous_positions[jj] + drift_speed_negz
                 
         new_positions=new_positions[abs(new_positions[:,2])<105] #retaining only the clusters inside TPC
