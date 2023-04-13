@@ -40,9 +40,12 @@ def animate_scatters(iteration, data, scatters):
         if(i<data[iteration].shape[0]):
             if(iteration>data[iteration][i,4]):
                 scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
+                #scatters[i].set_color('white')
+                scatters[i].set_sizes([10])
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
                 #scatters[i]._facecolor3d([1])
+                #scatters[i].set_color('white')
                 scatters[i].set_sizes([10]) #= [0.1]
                 
         else:
@@ -60,12 +63,20 @@ def animate_clusters(data, save=False):
 #        Animates the clusters, plots it and saves it if save=True
 
     # Attaching 3D axis to the figure
+    #plt.grid(False)
+    #plt.axis('off')
     fig = plt.figure(figsize=[5,5])
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection='3d',facecolor='white',alpha=0.0)
+    ax.grid(False)
+    ax.xaxis.set_pane_color((1,1,1,0))
+    ax.yaxis.set_pane_color((1,1,1,0))
+    ax.zaxis.set_pane_color((1,1,1,0))
+    
     #Drawing TPC
     Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
     ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.3)
     ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.3)
+    
     
     # Initialize scatters
     scatters = [ ax.scatter([100],[-100],[100]) for i in range(data[0].shape[0])]
@@ -76,13 +87,13 @@ def animate_clusters(data, save=False):
 
     # Setting the axes properties
     ax.set_xlim3d([-120, 120])
-    ax.set_xlabel('X')
+    ax.set_xlabel('X',color='black')
 
     ax.set_ylim3d([-120, 120])
-    ax.set_ylabel('Y')
+    ax.set_ylabel('Y',color='black')
 
     ax.set_zlim3d([-120, 120])
-    ax.set_zlabel('Z')
+    ax.set_zlabel('Z',color='black')
 
     ax.set_title('Clusters drifting in TPC (time scaled by $2*10^{5}$)')
 
@@ -93,8 +104,8 @@ def animate_clusters(data, save=False):
                                        interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
     #ani.set_sizes(np.ones(scatters.shape))
     if save:
-        print("Saving animation as Animated_clusters.mp4")
-        ani.save('Animated_clusters.mp4',writer='ffmpeg',fps=50)
+        print("Saving animation as Animated_clusters_gvt.mp4")
+        ani.save('Animated_clusters_gvt.mp4',writer='ffmpeg',fps=50)
         
         print("Animation saved")
     plt.show()
@@ -109,7 +120,9 @@ TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/
 #drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0])
 print((TPC_drift_speed/time_scale)*iteration_time)
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
-drift_speed_negz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
+drift_speed_negz=np.array([0.0,0.0,-TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
+print(drift_speed_posz)
+print(drift_speed_negz)
 
 def read_cluster_pos(inFile):
     if(inFile.lower().endswith('.json')):
@@ -147,21 +160,23 @@ def read_cluster_pos(inFile):
         ntp_cluster_tree=file['ntp_cluster']
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[branches.event<5]
+        #branches=branches[branches.event>3]
         branches=branches[~np.isnan(branches.gvt)]
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
-        
+        len_events=len(np.unique(branches.event))
+        #print(len_events)
+        event_times=[0]
+        event_times=np.append(event_times,np.random.poisson(3333.33,len_events-1))
+        event_times=np.cumsum(event_times,dtype=float)
+        print(event_times)
         for cluster in range(len(branches)):
-            scale=branches[cluster]['event']
-            gvt_event=branches[cluster]['event']*5000  #nanoseconds
-            #print(gvt_event)
+            #print(int(branches[cluster]['event']))
+            #gvt_event=branches[cluster]['event']*100  #nanoseconds
+            gvt_event=event_times[int(branches[cluster]['event'])]
             gvt_event=gvt_event*(10**(-6))*time_scale #Time in milliseconds scaled for animation
-            #print(gvt_event)
-            #print((10**(-6))*time_scale)
-            gvt_event=gvt_event/(20) #20ms is the time per iterations so this is the time in terms of iterations
-            
-            #print(branches[cluster]['gvt'])
-            
+            gvt_event=gvt_event/(20.0) #20ms is the time per iterations so this is the time in terms of iterations
+            print(gvt_event)
             x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z'],branches[cluster]['event'],gvt_event]])
             if(cluster==0):
                 x_y_z_clusters_run=np.copy(x_y_z_clusters_track)
@@ -181,19 +196,22 @@ nbr_iterations=100000
 for iteration in range(nbr_iterations):
         previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
         new_positions=np.copy(previous_positions) #initialisation
-        
         for jj in range(len(previous_positions)):
+            #print(previous_positions[jj][2])
             if(previous_positions[jj][2]>0 and iteration>previous_positions[jj][4]):
                 new_positions[jj] = previous_positions[jj] + drift_speed_posz
             elif(previous_positions[jj][2]<0 and iteration>previous_positions[jj][4]):
+                #print(previous_positions[jj])
                 new_positions[jj] = previous_positions[jj] + drift_speed_negz
-                
+                #print(new_positions[jj])
         new_positions=new_positions[abs(new_positions[:,2])<105] #retaining only the clusters inside TPC
         data.append(new_positions) #the last array should have size 0 for animation to remove all clusters outside TPC
         if(len(new_positions)==0):
             break
         
 print("Animation starting!")
+#print(data[1])
+#print(data[2])
 
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
