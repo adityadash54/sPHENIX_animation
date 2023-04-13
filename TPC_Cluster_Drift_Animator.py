@@ -42,11 +42,12 @@ def animate_scatters(iteration, data, scatters):
                 scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
-                #scatters[i]._facecolor3d = [[0, 0, 1, 1]]
+                #scatters[i]._facecolor3d([1])
                 scatters[i].set_sizes([10]) #= [0.1]
                 
         else:
             scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
+            #scatters[i].remove
         
     return scatters
 
@@ -59,7 +60,7 @@ def animate_clusters(data, save=False):
 #        Animates the clusters, plots it and saves it if save=True
 
     # Attaching 3D axis to the figure
-    fig = plt.figure(figsize=[7,7])
+    fig = plt.figure(figsize=[5,5])
     ax = fig.add_subplot(111, projection='3d')
     #Drawing TPC
     Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
@@ -83,7 +84,7 @@ def animate_clusters(data, save=False):
     ax.set_zlim3d([-120, 120])
     ax.set_zlabel('Z')
 
-    ax.set_title('Clusters drifting in TPC (speed scaled by $5*10^{-6}$)')
+    ax.set_title('Clusters drifting in TPC (time scaled by $2*10^{5}$)')
 
     # Provide starting angle for the view.
     ax.view_init(20, 30,0,'y')
@@ -101,8 +102,14 @@ def animate_clusters(data, save=False):
 # Main Program starts from here
     
 #User defined values
-drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
-drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0])
+time_scale=2.0*(10.0**5) #inverse of speed scale
+iteration_time=20.0 #20ms
+TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
+#drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
+#drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0])
+print((TPC_drift_speed/time_scale)*iteration_time)
+drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
+drift_speed_negz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
 
 def read_cluster_pos(inFile):
     if(inFile.lower().endswith('.json')):
@@ -139,16 +146,20 @@ def read_cluster_pos(inFile):
         file = uproot.open(inFile)
         ntp_cluster_tree=file['ntp_cluster']
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
+        branches=branches[branches.event<5]
         branches=branches[~np.isnan(branches.gvt)]
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
         
         for cluster in range(len(branches)):
             scale=branches[cluster]['event']
-            gvt_event=branches[cluster]['event']*50000
-            print(gvt_event)
-            gvt_event=gvt_event/(5*10-6) #Scaled time in nanoseconds inverse of scale for speed
-            gvt_event=gvt_event/(20*10^6) #20ms is the time per iterations so this is the time in terms of iterations
+            gvt_event=branches[cluster]['event']*5000  #nanoseconds
+            #print(gvt_event)
+            gvt_event=gvt_event*(10**(-6))*time_scale #Time in milliseconds scaled for animation
+            #print(gvt_event)
+            #print((10**(-6))*time_scale)
+            gvt_event=gvt_event/(20) #20ms is the time per iterations so this is the time in terms of iterations
+            
             #print(branches[cluster]['gvt'])
             
             x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z'],branches[cluster]['event'],gvt_event]])
@@ -162,7 +173,7 @@ def read_cluster_pos(inFile):
 print("Generating data for animation")
 
 #ANIMATION
-x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_gvt.root")
+x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_gvt_13April.root")
 data = [x_y_z_clusters]
 #print(data)
 
