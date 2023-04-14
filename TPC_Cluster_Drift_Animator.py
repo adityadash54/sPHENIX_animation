@@ -38,14 +38,19 @@ def raddist_cluster(cluster_pos):
 def animate_scatters(iteration, data, scatters):
     for i in range(data[0].shape[0]):
         if(i<data[iteration].shape[0]):
-            if(iteration>data[iteration][i,4]):
+            if(iteration>=data[iteration][i,4]):
                 scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
-                scatters[i].set_color(int(data[iteration][i,3]))
+                #color=[0.0,0.0,0.0]
+                #color[2-int((data[iteration][i,3])%3)]=0.99
+                color=['r','g','b','c','m','y']
+                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
                 scatters[i].set_sizes([10])
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
                 #scatters[i]._facecolor3d([1])
-                scatters[i].set_color(int(data[iteration][i,3]))
+                color=['r','g','b','c','m','y']
+                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
+                #scatters[i].set_color(color)
                 scatters[i].set_sizes([10]) #= [0.1]
                 
         else:
@@ -118,10 +123,12 @@ iteration_time=20.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 #drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
 #drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0])
-print((TPC_drift_speed/time_scale)*iteration_time)
+#print((TPC_drift_speed/time_scale)*iteration_time)
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
 drift_speed_negz=np.array([0.0,0.0,-TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
+print("drift_speed_posz=")
 print(drift_speed_posz)
+print("drift_speed_negz=")
 print(drift_speed_negz)
 
 def read_cluster_pos(inFile):
@@ -159,8 +166,8 @@ def read_cluster_pos(inFile):
         file = uproot.open(inFile)
         ntp_cluster_tree=file['ntp_cluster']
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
-        branches=branches[((branches.x)**2+(branches.x)**2)<900]
-        branches=branches[branches.event<5]
+        branches=branches[((branches.x)**2+(branches.x)**2)>900]
+        #branches=branches[branches.event<5]
         #branches=branches[branches.event>3]
         branches=branches[~np.isnan(branches.gvt)]
         print("Reading clusters")
@@ -168,16 +175,16 @@ def read_cluster_pos(inFile):
         len_events=len(np.unique(branches.event))
         #print(len_events)
         event_times=[0]
-        event_times=np.append(event_times,np.random.poisson(3333.33,len_events-1))
+        event_times=np.append(event_times,np.random.poisson(333.33,len_events-1))
         event_times=np.cumsum(event_times,dtype=float)
-        print(event_times)
+        #print(event_times)
         for cluster in range(len(branches)):
             #print(int(branches[cluster]['event']))
             #gvt_event=branches[cluster]['event']*100  #nanoseconds
             gvt_event=event_times[int(branches[cluster]['event'])]
             gvt_event=gvt_event*(10**(-6))*time_scale #Time in milliseconds scaled for animation
             gvt_event=gvt_event/(20.0) #20ms is the time per iterations so this is the time in terms of iterations
-            print(gvt_event)
+            #print(gvt_event)
             x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z'],branches[cluster]['event'],gvt_event]])
             if(cluster==0):
                 x_y_z_clusters_run=np.copy(x_y_z_clusters_track)
@@ -199,9 +206,9 @@ for iteration in range(nbr_iterations):
         new_positions=np.copy(previous_positions) #initialisation
         for jj in range(len(previous_positions)):
             #print(previous_positions[jj][2])
-            if(previous_positions[jj][2]>0 and iteration>previous_positions[jj][4]):
+            if(previous_positions[jj][2]>0 and iteration>=previous_positions[jj][4]):
                 new_positions[jj] = previous_positions[jj] + drift_speed_posz
-            elif(previous_positions[jj][2]<0 and iteration>previous_positions[jj][4]):
+            elif(previous_positions[jj][2]<0 and iteration>=previous_positions[jj][4]):
                 #print(previous_positions[jj])
                 new_positions[jj] = previous_positions[jj] + drift_speed_negz
                 #print(new_positions[jj])
