@@ -35,7 +35,7 @@ def raddist_cluster(cluster_pos):
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
     return radius
     
-def animate_scatters(iteration, data, scatters):
+def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time):
     for i in range(data[0].shape[0]):
         if(i<data[iteration].shape[0]):
             if(iteration>=data[iteration][i,4]):
@@ -49,15 +49,21 @@ def animate_scatters(iteration, data, scatters):
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
                 #scatters[i]._facecolor3d([1])
                 color=['r','g','b','c','m','y']
-                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
+                scatters[i].set_color('black')
+                #scatters[i].set_color(color[int(data[iteration][i,3]%6)])
                 #scatters[i].set_color(color)
                 scatters[i].set_sizes([10]) #= [0.1]
                 
         else:
             scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
+            scatters[i].set_color('black')
+    #fig_text.remove()
+    #fig_text=ax.text(-100,90,100,  str(iteration), size=10,color='w',alpha=0.9)
+    #ax.text[-1].set_text("str(iteration)")
             #scatters[i].remove
+    fig_text.set_text(str(round(iteration*iteration_time/time_scale*(10**3),3))+"$\mu$s")
         
-    return scatters
+    return scatters,fig_text
 
 
 def animate_clusters(data, save=False):
@@ -70,17 +76,34 @@ def animate_clusters(data, save=False):
     # Attaching 3D axis to the figure
     #plt.grid(False)
     #plt.axis('off')
-    fig = plt.figure(figsize=[5,5])
-    ax = fig.add_subplot(111, projection='3d',facecolor='white',alpha=0.0)
+    fig = plt.figure(figsize=[7.5,7.5],layout='constrained')
+    ax = fig.add_subplot(111, projection='3d',facecolor='black',alpha=0.0)
+    #plt.rc('axes',edgecolor='white')
     ax.grid(False)
+    ax.margins(0.0)
     ax.xaxis.set_pane_color((1,1,1,0))
-    ax.yaxis.set_pane_color((1,1,1,0))
-    ax.zaxis.set_pane_color((1,1,1,0))
+    ax.xaxis.line.set_color('w')
+    #ax.xaxis.set_edgecolor('w')
+    ax.spines['top'].set_color('w')
+    ax.spines['bottom'].set_color('w')
+    ax.spines['left'].set_color('w')
+    ax.spines['right'].set_color('w')
     
+    
+    #for a in ax.spines:
+        #print(a)
+    
+    ax.yaxis.set_pane_color((1,1,1,0))
+    ax.yaxis.line.set_color('w')
+    ax.zaxis.set_pane_color((1,1,1,0))
+    ax.zaxis.line.set_color('w')
+    
+    #plt.rc('axes', spinecolor='white',edgecolor='white', labelcolor='white', grid=False)
+    #ax.spines.bottom.set_color('white')
     #Drawing TPC
     Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
-    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.3)
-    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.3)
+    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.7)
+    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.7)
     
     
     # Initialize scatters
@@ -92,25 +115,34 @@ def animate_clusters(data, save=False):
 
     # Setting the axes properties
     ax.set_xlim3d([-120, 120])
-    ax.set_xlabel('X',color='black')
-
+    ax.set_xlabel('X',color='white',fontsize=7)
+    #plt.yticks(color=20)
+    ax.xaxis.set_tick_params(colors='white',labelsize=7)
+    
     ax.set_ylim3d([-120, 120])
-    ax.set_ylabel('Y',color='black')
+    ax.set_ylabel('Y',color='white',fontsize=7)
+    ax.yaxis.set_tick_params(colors='white',labelsize=7)
 
     ax.set_zlim3d([-120, 120])
-    ax.set_zlabel('Z',color='black')
+    ax.set_zlabel('Z',color='white',fontsize=7)
+    ax.zaxis.set_tick_params(colors='white',labelsize=7)
 
-    ax.set_title('Clusters drifting in TPC (time scaled by $2*10^{5}$)')
-
+    ax.set_title('Clusters drifting in TPC') #(time scaled by $2*10^{5}$)')
+    fig_text=ax.text(-100,90,100,  'time', size=10,color='w',alpha=0.9)
+    #ax.annotate('time', (61, 25),
+    #        xytext=(0.8, 0.9), textcoords='axes fraction',
+    #        arrowprops=dict(facecolor='black', shrink=0.05),
+    #        fontsize=16,
+    #        horizontalalignment='right', verticalalignment='top')
     # Provide starting angle for the view.
-    ax.view_init(20, 30,0,'y')
+    ax.view_init(15, 50,0,'y')
 
-    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters),
+    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time),
                                        interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
     #ani.set_sizes(np.ones(scatters.shape))
     if save:
-        print("Saving animation as Animated_clusters_gvt.mp4")
-        ani.save('Animated_clusters_gvt.mp4',writer='ffmpeg',fps=50)
+        print("Saving animation as Animated_clusters_gvt_withtiming.mp4")
+        ani.save('Animated_clusters_gvt_withtiming.mp4',writer='ffmpeg')
         
         print("Animation saved")
     plt.show()
@@ -118,8 +150,8 @@ def animate_clusters(data, save=False):
 # Main Program starts from here
     
 #User defined values
-time_scale=2.0*(10.0**5) #inverse of speed scale
-iteration_time=20.0 #20ms
+time_scale=1.0*(10.0**6) #inverse of speed scale
+iteration_time=100.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 #drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
 #drift_speed_negz=np.array([0.0,0.0,-0.8,0.0,0.0])
@@ -183,7 +215,7 @@ def read_cluster_pos(inFile):
             #gvt_event=branches[cluster]['event']*100  #nanoseconds
             gvt_event=event_times[int(branches[cluster]['event'])]
             gvt_event=gvt_event*(10**(-6))*time_scale #Time in milliseconds scaled for animation
-            gvt_event=gvt_event/(20.0) #20ms is the time per iterations so this is the time in terms of iterations
+            gvt_event=gvt_event/(iteration_time) #20ms is the time per iterations so this is the time in terms of iterations
             #print(gvt_event)
             x_y_z_clusters_track=np.array([[branches[cluster]['x'], branches[cluster]['y'], branches[cluster]['z'],branches[cluster]['event'],gvt_event]])
             if(cluster==0):
