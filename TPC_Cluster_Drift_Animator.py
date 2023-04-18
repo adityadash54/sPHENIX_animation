@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import uproot
 import awkward as ak
-import mpl_toolkits.mplot3d.axes3d as p3
+#import mpl_toolkits.mplot3d.axes3d as p3
+import mpl_toolkits.mplot3d.art3d as art3d
+#from mpl_toolkits import mplot3d
+from matplotlib.patches import Circle,Wedge
+from matplotlib.collections import PatchCollection
 import matplotlib.animation as animation
 import array
 
@@ -22,7 +26,7 @@ import array
 def TPC_surface(inner_radius,outer_radius, length_z):
     ngridpoints=30
     z = np.linspace(-length_z, length_z, ngridpoints)
-    phi = np.linspace(np.pi/2, 3*np.pi/2, ngridpoints)
+    phi = np.linspace(0, 2*np.pi, ngridpoints)
     phi_grid, z_grid=np.meshgrid(phi, z)
     x_grid_inner = inner_radius*np.cos(phi_grid)
     y_grid_inner = inner_radius*np.sin(phi_grid)
@@ -30,6 +34,23 @@ def TPC_surface(inner_radius,outer_radius, length_z):
     y_grid_outer = outer_radius*np.sin(phi_grid)
     
     return x_grid_inner,y_grid_inner,x_grid_outer,y_grid_outer,z_grid
+
+def TPC_endcap(inner_radius,outer_radius, length_z):
+    ngridpoints=30
+    radius = np.linspace(inner_radius, outer_radius, 5)
+    phi = np.linspace(0, 2*np.pi, ngridpoints)
+    phi_grid, r_grid=np.meshgrid(phi, radius)
+    x_grid=[]
+    y_grid=[]
+    for r in radius:
+        x_grid_radius = r*np.cos(phi_grid)
+        y_grid_radius = r*np.sin(phi_grid)
+        x_grid=np.append(x_grid,x_grid_radius)
+        y_grid=np.append(y_grid,y_grid_radius)
+    
+    z_grid=x_grid
+    return x_grid,y_grid,z_grid
+
 
 def raddist_cluster(cluster_pos):
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
@@ -43,7 +64,7 @@ def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_tim
                 #color=[0.0,0.0,0.0]
                 #color[2-int((data[iteration][i,3])%3)]=0.99
                 color=['r','g','b','c','m','y']
-                scatters[i].set_color(color[int(data[iteration][i,3]%6)],alpha=1.0)
+                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
                 scatters[i].set_sizes([10])
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
@@ -76,7 +97,7 @@ def animate_clusters(data, save=False):
     # Attaching 3D axis to the figure
     #plt.grid(False)
     #plt.axis('off')
-    fig = plt.figure(figsize=[8.5,8.5],layout='constrained')
+    fig = plt.figure(figsize=[7.5,7.5],layout='constrained')
     ax = fig.add_subplot(111, projection='3d',facecolor='black',alpha=0.0)
     #plt.rc('axes',edgecolor='white')
     ax.grid(False)
@@ -98,13 +119,55 @@ def animate_clusters(data, save=False):
     ax.zaxis.set_pane_color((1,1,1,0))
     ax.zaxis.line.set_color('w')
     
+    
+    endcap1=Wedge((0, 0), 80, 0, 360, 60,color='blue',alpha=0.7)
+    endcap2=Wedge((0, 0), 80, 0, 360, 60,color='blue',alpha=0.7)
+    
+    ax.add_artist(endcap1)
+    ax.add_artist(endcap2)
+    
+    art3d.pathpatch_2d_to_3d(endcap1, z=105, zdir="z")
+    art3d.pathpatch_2d_to_3d(endcap2, z=-105, zdir="z")
+    
+    
+    
+    
+
     #plt.rc('axes', spinecolor='white',edgecolor='white', labelcolor='white', grid=False)
     #ax.spines.bottom.set_color('white')
     #Drawing TPC
     Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
-    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.7)
-    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.7)
+    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.5)
+    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.5)
     
+    
+    endcap1 = Circle((0, 0), radius=80,color='blue')
+    print(type(Circle))
+    endcap2 = Circle((0, 0), 80,color='blue')
+    endcap1_in = Circle((0, 0), radius=80,color='white',alpha=0.5)
+    endcap2_in = Circle((0, 0), 80,color='white',alpha=0.5)
+    
+    #ax.add_patch(endcap1)
+    #ax.add_patch(endcap2)
+    #ax.add_patch(endcap1_in)
+    #ax.add_patch(endcap2_in)
+    
+    
+    #art3d.pathpatch_2d_to_3d(endcap1, z=108, zdir="z")
+    #art3d.pathpatch_2d_to_3d(endcap2, z=-108, zdir="z")
+    #art3d.pathpatch_2d_to_3d(endcap1_in, z=108, zdir="z")
+    #art3d.pathpatch_2d_to_3d(endcap2_in, z=-108, zdir="z")
+    
+    #patches=Wedge((.7, .8), .2, 0, 360, width=0.05),  # Full ring
+    #print(type(patches))
+    #p = PatchCollection(patches, alpha=0.4)
+    
+    #colors = 100 * np.random.rand(len(patches))
+    #p.set_array(colors)
+    #art3d.pathpatch_2d_to_3d(patches, z=108, zdir="z")
+
+#    ax.add_collection(p)
+#    fig.colorbar(p, ax=ax)
     
     # Initialize scatters
     scatters = [ ax.scatter([100],[-100],[100]) for i in range(data[0].shape[0])]
@@ -129,20 +192,28 @@ def animate_clusters(data, save=False):
 
     ax.set_title('Clusters drifting in TPC') #(time scaled by $2*10^{5}$)')
     fig_text=ax.text(-100,90,100,  'time', size=10,color='w',alpha=0.9)
+    fig_text_sPhenix=ax.text(-100,130,100,  'sPHENIX', size=10,fontweight='bold',style='italic',color='w',alpha=0.9)
+    fig_text_TPC=ax.text(-60,135,70,  'TPC simulation', size=10,style='italic',color='w',alpha=0.9)
+    
+    fig_text_sPhenix=ax.text(-100,110,100,  'p+p, sqrt(s) = 200 GeV, 4MHz', size=10,color='w',alpha=0.9)
+    
+    #fig_text_sPhenix=ax.text(100,70,-100,  'p+p, $\sqrt("s")$ = 200 GeV, 4MHz', size=10,color='w',alpha=0.9)
+    
+    
     #ax.annotate('time', (61, 25),
     #        xytext=(0.8, 0.9), textcoords='axes fraction',
     #        arrowprops=dict(facecolor='black', shrink=0.05),
     #        fontsize=16,
     #        horizontalalignment='right', verticalalignment='top')
     # Provide starting angle for the view.
-    ax.view_init(15, 50,0,'y')
+    ax.view_init(10,70,0,'y')
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time),
                                        interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
     #ani.set_sizes(np.ones(scatters.shape))
     if save:
-        print("Saving animation as Animated_clusters_gvt_TPClayout.mp4")
-        ani.save('Animated_clusters_gvt_TPClayout.mp4',writer='ffmpeg')
+        print("Saving animation as Animated_clusters_gvt_withtiming.mp4")
+        ani.save('Animated_clusters_gvt_withtiming.mp4',writer='ffmpeg')
         
         print("Animation saved")
     plt.show()
@@ -150,7 +221,7 @@ def animate_clusters(data, save=False):
 # Main Program starts from here
     
 #User defined values
-time_scale=5.0*(10.0**6) #inverse of speed scale
+time_scale=1.0*(10.0**6) #inverse of speed scale
 iteration_time=100.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 #drift_speed_posz=np.array([0.0,0.0,0.8,0.0,0.0]) #(x,y,z,event,gvt) #z distance travelled in cm per iteration(in 20ms as fps is 50) in the animation #Actual drift speed=8cm/microsecond, so here it is scaled by 5*10^-6 i.e. in animation speed is 40cm/second
@@ -199,8 +270,11 @@ def read_cluster_pos(inFile):
         ntp_cluster_tree=file['ntp_cluster']
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[((branches.x)**2+(branches.x)**2)>900]
-        branches=branches[branches.event<5]
-        #branches=branches[branches.evenTPC])
+        branches=branches[branches.event<2]
+        #branches=branches[branches.event>3]
+        branches=branches[~np.isnan(branches.gvt)]
+        print("Reading clusters")
+        x_y_z_clusters_run=np.array([])
         len_events=len(np.unique(branches.event))
         #print(len_events)
         event_times=[0]
