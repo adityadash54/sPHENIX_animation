@@ -61,9 +61,11 @@ def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_tim
                 color=['r','g','b','c','m','y']
                 scatters[i].set_color(color[int(data[iteration][i,3]%6)])
                 scatters[i].set(alpha=1.0)
-                scatters[i].set_sizes([10])
-                scatters[i].set_zorder((iteration))
+                if(abs(data[iteration][i,2])>105-8.0*(10.0**3)/time_scale*iteration_time): #TPC_drift_speed=8.0*(10.0**3)
+                    scatters[i].set_color('w')
+                    scatters[i].set_sizes([20])
                 
+
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
                 color=['r','g','b','c','m','y']
@@ -161,7 +163,7 @@ def animate_clusters(data, save=False):
 # Main Program starts from here
     
 #User defined values
-time_scale=1.0*(10.0**6) #inverse of speed scale
+time_scale=4.0*(10.0**6) #inverse of speed scale
 iteration_time=100.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
@@ -212,7 +214,7 @@ def read_cluster_pos(inFile):
         x_y_z_clusters_run=np.array([])
         len_events=len(np.unique(branches.event))
         event_times=[0]
-        event_times=np.append(event_times,np.random.poisson(250,len_events-1)) #mean is the average collision time in nanoseconds
+        event_times=np.append(event_times,np.random.poisson(250.00,len_events-1))
         event_times=np.cumsum(event_times,dtype=float)
         for cluster in range(len(branches)):
             gvt_event=event_times[int(branches[cluster]['event'])]
@@ -249,5 +251,6 @@ print("Animation starting!")
 
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
-animate_clusters(data, save=False)
+animate_clusters(data, save=True)
+
 
