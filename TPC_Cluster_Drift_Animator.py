@@ -6,7 +6,6 @@ import uproot
 import awkward as ak
 import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Wedge
-#from matplotlib.collections import PatchCollection
 import matplotlib.animation as animation
 import array
 
@@ -74,7 +73,7 @@ def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_tim
         else:
             scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
             scatters[i].set_color('black')
-    fig_text.set_text(str(round(iteration*iteration_time/time_scale*(10**3),3))+"$\mu$s")
+    fig_text.set_text(str(round(iteration*iteration_time/time_scale*(10**3),2))+"$\mu$s")
         
     return scatters,fig_text
 
@@ -162,7 +161,7 @@ def animate_clusters(data, save=False):
 # Main Program starts from here
     
 #User defined values
-time_scale=5.0*(10.0**6) #inverse of speed scale
+time_scale=1.0*(10.0**6) #inverse of speed scale
 iteration_time=100.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
@@ -207,13 +206,13 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        #branches=branches[branches.event<10]
+        branches=branches[branches.event<2]
         #print(((branches.x)**2+(branches.y)**2))
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
         len_events=len(np.unique(branches.event))
         event_times=[0]
-        event_times=np.append(event_times,np.random.poisson(333.33,len_events-1))
+        event_times=np.append(event_times,np.random.poisson(250,len_events-1)) #mean is the average collision time in nanoseconds
         event_times=np.cumsum(event_times,dtype=float)
         for cluster in range(len(branches)):
             gvt_event=event_times[int(branches[cluster]['event'])]
@@ -229,7 +228,7 @@ def read_cluster_pos(inFile):
 print("Generating data for animation")
 
 #ANIMATION
-x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_gvt_13April.root")
+x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
 data = [x_y_z_clusters]
 
 nbr_iterations=100000
