@@ -53,7 +53,9 @@ def raddist_cluster(cluster_pos):
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
     return radius
     
-def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time):
+def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
+    iteration=iteration+skip_iterations
+    #print(iteration)
     for i in range(data[0].shape[0]):
         if(i<data[iteration].shape[0]):
             if(iteration>=data[iteration][i,4]):
@@ -61,14 +63,14 @@ def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_tim
                 color=['r','g','b','c','m','y']
                 scatters[i].set_color(color[int(data[iteration][i,3]%6)])
                 scatters[i].set(alpha=1.0)
-                if(abs(data[iteration][i,2])>105-8.0*(10.0**3)/time_scale*iteration_time): #TPC_drift_speed=8.0*(10.0**3)
+                #if(abs(data[iteration][i,2])>105-8.0*(10.0**3)/time_scale*iteration_time):#TPC_drift_speed=8.0*(10.0**3)
+                if(abs(data[iteration][i,2])>105):
                     scatters[i].set_color('w')
-                    scatters[i].set_sizes([20])
+                    #scatters[i].set_sizes([20])
                 
 
             else:
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
-                color=['r','g','b','c','m','y']
                 scatters[i].set_color('black')
                 scatters[i].set_sizes([10]) #= [0.1]
                 
@@ -80,7 +82,7 @@ def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_tim
     return scatters,fig_text
 
 
-def animate_clusters(data, save=False):
+def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,skip_iterations=0):
 #    Input:
 #        data (list): List of the cluster positions at each iteration.
 #        save (bool): Option to save the recording of the animation. (Default is False).
@@ -150,12 +152,15 @@ def animate_clusters(data, save=False):
     # Number of iterations
     iterations = len(data)
 
-    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time),
+    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
                                        interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
     #ani.set_sizes(np.ones(scatters.shape))
     if save:
-        print("Saving animation as Animated_clusters_TPC.mp4")
-        ani.save('Animated_clusters_TPC.mp4',writer='ffmpeg')
+        #print("Saving animation as Animated_clusters_TPC.mp4")
+        #ani.save('Animated_clusters_TPC.mp4',writer='ffmpeg')
+        print("Saving animation as"+animation_name)
+        ani.save(animation_name,writer='ffmpeg')
+        
         
         print("Animation saved")
     plt.show()
@@ -168,9 +173,9 @@ iteration_time=100.0 #20ms
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
 drift_speed_negz=np.array([0.0,0.0,-TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
-print("drift_speed_posz=")
+print("drift_speed_posz(cm/iteration)=")
 print(drift_speed_posz)
-print("drift_speed_negz=")
+print("drift_speed_negz(cm/iteration)=")
 print(drift_speed_negz)
 
 def read_cluster_pos(inFile):
@@ -233,24 +238,30 @@ print("Generating data for animation")
 x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
 data = [x_y_z_clusters]
 
-nbr_iterations=100000
-for iteration in range(nbr_iterations):
-        previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
-        new_positions=np.copy(previous_positions) #initialisation
-        for jj in range(len(previous_positions)):
-            if(previous_positions[jj][2]>0 and iteration>=previous_positions[jj][4]):
-                new_positions[jj] = previous_positions[jj] + drift_speed_posz
-            elif(previous_positions[jj][2]<0 and iteration>=previous_positions[jj][4]):
-                new_positions[jj] = previous_positions[jj] + drift_speed_negz
-        new_positions=new_positions[abs(new_positions[:,2])<105] #retaining only the clusters inside TPC
-        data.append(new_positions) #the last array should have size 0 for animation to remove all clusters outside TPC
-        if(len(new_positions)==0):
-            break
+def preparedata(itr_start,itr_stop):
+    #nbr_iterations=100000
+    #itr_start=0
+    #itr_stop=100000
+    for iteration in range(itr_start,itr_stop):
+            previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
+            new_positions=np.copy(previous_positions) #initialisation
+            for jj in range(len(previous_positions)):
+                if(previous_positions[jj][2]>0 and iteration>=previous_positions[jj][4]):
+                    new_positions[jj] = previous_positions[jj] + drift_speed_posz
+                elif(previous_positions[jj][2]<0 and iteration>=previous_positions[jj][4]):
+                    new_positions[jj] = previous_positions[jj] + drift_speed_negz
+            #print(drift_speed_posz[2])
+            new_positions=new_positions[abs(new_positions[:,2])<(105+drift_speed_posz[2])] #retaining only the clusters inside TPC
+            data.append(new_positions) #the last array should have size 0 for animation to remove all clusters outside TPC
+            if(len(new_positions)==0):
+                break
         
 print("Animation starting!")
 
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
-animate_clusters(data, save=True)
+
+preparedata(0,10000) #2nd argument is the maximum number of iterations
+animate_clusters(data,"Animated_clusters_TPC_0to20.mp4",save=True,skip_iterations=100)
 
 
