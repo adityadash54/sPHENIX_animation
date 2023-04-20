@@ -53,35 +53,75 @@ def raddist_cluster(cluster_pos):
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
     return radius
     
+#def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
+    #print(str(round((iteration+skip_iterations)*iteration_time/time_scale*(10**3),2)))
+    #iteration=iteration+skip_iterations
+    #print(iteration)
+#    for i in range(data[0].shape[0]):
+#        if(i<data[iteration].shape[0]):
+#            if(iteration>=data[iteration][i,4]):
+#                scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
+#                color=['r','g','b','c','m','y']
+#                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
+#                scatters[i].set(alpha=1.0)
+#                #if(abs(data[iteration][i,2])>105-8.0*(10.0**3)/time_scale*iteration_time):#TPC_drift_speed=8.0*(10.0**3)
+#                if(abs(data[iteration][i,2])>105):
+#                   scatters[i].set_color('w')
+                    #scatters[i].set_sizes([20])
+                
+
+ #           else:
+ #               scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
+  #              scatters[i].set_color('black')
+  #              scatters[i].set_sizes([10]) #= [0.1]
+                
+  #      else:
+  #          scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
+#         scatters[i].set_color('black')
+#    fig_text.set_text(str(round((iteration+skip_iterations)*iteration_time/time_scale*(10**3),2))+"$\mu$s")
+        
+ #   return scatters,fig_text
+
 def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
     #print(str(round((iteration+skip_iterations)*iteration_time/time_scale*(10**3),2)))
     #iteration=iteration+skip_iterations
     #print(iteration)
     for i in range(data[0].shape[0]):
-        if(i<data[iteration].shape[0]):
-            if(iteration>=data[iteration][i,4]):
-                scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:3])
+        time=(iteration+skip_iterations)*iteration_time/time_scale*(10**3)
+        if(data[0][i,3]==2):
+            print(time)
+            print(data[0][i])
+            print(iteration_time)
+        effective_time=iteration-data[0][i,4]
+        #print(effective_time)
+        if(effective_time>=0):
+            #print("coming here")
+            #print(data[0][i,2])
+            if(data[0][i,2]>0):
+                effective_z=data[0][i,2]+drift_speed_posz[2]*iteration
+                #print(effective_z)
+            if(data[0][i,2]<0):
+                effective_z=data[0][i,2]+drift_speed_negz[2]*iteration
+                #print(effective_z)
+            if(abs(effective_z)<105):
+                scatters[i]._offsets3d = (data[0][i,0:1], data[0][i,1:2], [effective_z])
                 color=['r','g','b','c','m','y']
-                scatters[i].set_color(color[int(data[iteration][i,3]%6)])
+                scatters[i].set_color(color[int(data[0][i,3]%6)])
                 scatters[i].set(alpha=1.0)
-                #if(abs(data[iteration][i,2])>105-8.0*(10.0**3)/time_scale*iteration_time):#TPC_drift_speed=8.0*(10.0**3)
-                if(abs(data[iteration][i,2])>105):
-                    scatters[i].set_color('w')
-                    #scatters[i].set_sizes([20])
-                
-
-            else:
+ 
+            if(abs(effective_z)>105):
                 scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
                 scatters[i].set_color('black')
                 scatters[i].set_sizes([10]) #= [0.1]
-                
+
+            
         else:
             scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
             scatters[i].set_color('black')
+ 
     fig_text.set_text(str(round((iteration+skip_iterations)*iteration_time/time_scale*(10**3),2))+"$\mu$s")
         
     return scatters,fig_text
-
 
 def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,skip_iterations=0):
 #    Input:
@@ -151,7 +191,8 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     scatters = [ ax.scatter([100],[-100],[100],zorder=5) for i in range(data[0].shape[0])]
     print("Plot initialized")
     # Number of iterations
-    iterations = len(data)
+    #iterations = len(data)
+    iterations = 1000
     #print(iterations)
 
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
@@ -202,7 +243,7 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        branches=branches[branches.event<10]
+        branches=branches[branches.event<3]
         #print(((branches.x)**2+(branches.y)**2))
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
@@ -223,31 +264,11 @@ def read_cluster_pos(inFile):
         
 print("Generating data for animation")
 
-def preparedata(itr_start,itr_stop):
-    #nbr_iterations=100000
-    #itr_start=0
-    #itr_stop=100000
-    for iteration in range(itr_start,itr_stop):
-            previous_positions = np.copy(data[-1]) #use np.copy() otherwise the values in data[-1] change when we change values in previous_positions
-            new_positions=np.copy(previous_positions) #initialisation
-            for jj in range(len(previous_positions)):
-                if(previous_positions[jj][2]>0 and iteration>=previous_positions[jj][4]):
-                    new_positions[jj] = previous_positions[jj] + drift_speed_posz
-                elif(previous_positions[jj][2]<0 and iteration>=previous_positions[jj][4]):
-                    new_positions[jj] = previous_positions[jj] + drift_speed_negz
-            #print(drift_speed_posz[2])
-            new_positions=new_positions[abs(new_positions[:,2])<(105+drift_speed_posz[2])] #retaining only the clusters inside TPC
-            data.append(new_positions) #the last array should have size 0 for animation to remove all clusters outside TPC
-            if(len(new_positions)==0):
-                break
-        
-
-
 
 # Main Program starts from here
 
 #User defined values
-time_scale=8.0*(10.0**7) #inverse of speed scale
+time_scale=8.0*(10.0**5) #inverse of speed scale
 iteration_time=100.0 #20ms
 #TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 TPC_drift_speed=10*8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
@@ -263,15 +284,14 @@ x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
 data = [x_y_z_clusters]
 #print(len(data))
 
-preparedata(0,5) #2nd argument is the maximum number of iterations
 #print(len(data))
 min_iterations=0
-max_iterations=100
+max_iterations=10000
 
 print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data[min_iterations:max_iterations],"Animated_clusters_TPC_0to100.mp4",save=True,skip_iterations=min_iterations)
+animate_clusters(data[min_iterations:max_iterations],"Animated_clusters_TPC_0to10000.mp4",save=False,skip_iterations=min_iterations)
 
 #Merge using ffmpeg -f concat -safe 0 -i fileList.txt -c copy mergedVideo.mp4
