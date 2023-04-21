@@ -54,46 +54,34 @@ def raddist_cluster(cluster_pos):
     return radius
     
 def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
-    #print(str(round((iteration+skip_iterations)*iteration_time/time_scale*(10**3),2)))
-    #iteration=iteration+skip_iterations
     if(iteration%10==0):
         print("iteration=")
         print(iteration)
-    for i in range(data[0].shape[0]):
+    for i in range(data.shape[0]):
         time=(iteration+skip_iterations)*iteration_time/time_scale*(10**3)
-        #if(data[0][i,3]==2):
-        #    print(time)
-        #    print(data[0][i])
-        #    print(iteration_time)
-        effective_time=iteration-data[0][i,4]
-        #print(effective_time)
+        effective_time=iteration-data[i,4]
         if(effective_time>=0):
-            #print("coming here")
-            #print(data[0][i,2])
-            if(data[0][i,2]>0):
-                effective_z=data[0][i,2]+drift_speed_posz[2]*iteration
-                #print(effective_z)
-            if(data[0][i,2]<0):
-                effective_z=data[0][i,2]+drift_speed_negz[2]*iteration
-                #print(effective_z)
+            if(data[i,2]>0):
+                effective_z=data[i,2]+drift_speed_posz[2]*iteration
+            if(data[i,2]<0):
+                effective_z=data[i,2]+drift_speed_negz[2]*iteration
             if(abs(effective_z)<(110)):
-                scatters[i]._offsets3d = (data[0][i,0:1], data[0][i,1:2], [effective_z])
+                scatters[i]._offsets3d = (data[i,0:1], data[i,1:2], [effective_z])
                 color=['r','g','b','c','m','y']
                 
                 if(abs(effective_z)<105):
-                    scatters[i].set_color(color[int(data[0][i,3]%6)])
+                    scatters[i].set_color(color[int(data[i,3]%6)])
                     
                 if(abs(effective_z)>=105 and abs(effective_z)<105+drift_speed_posz[2]):
-                    #print(effective_z)
                     scatters[i].set_color('white')
                     scatters[i].set(alpha=1.0)
  
                 if(abs(effective_z)>105+2*drift_speed_posz[2]):
-                    scatters[i]._offsets3d = ([100], [-100], [100])  #clusters from event not yet taken place
+                    scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
                     scatters[i].set_color('black')
                     scatters[i].set_sizes([10]) #= [0.1]
         else:
-            scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
+            scatters[i]._offsets3d = ([100], [-100], [100]) #clusters from event not yet taken place
             scatters[i].set_color('black')
  
     fig_text.set_text(str(round(time,2))+"$\mu$s")
@@ -160,14 +148,15 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     ax.view_init(10,70,0,'y')
     
     # Initialize scatters
-    scatters = [ ax.scatter([100],[-100],[100],zorder=5) for i in range(data[0].shape[0])]
+    scatters = [ ax.scatter([100],[-100],[100],zorder=5) for i in range(data.shape[0])]
     print("Plot initialized")
     # Number of iterations
-    #iterations = len(data)
-    no_events=2
+    no_events=np.max(data[:,3])+1
+    print(no_events)
     len_TPC=105.0
     iterations = int(no_events*0.27/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
-    #iterations=50
+    print(iterations)
+    iterations=50
     print("number of iterations=")
     print(iterations)
 
@@ -252,8 +241,8 @@ print("drift_speed_negz(cm/iteration)=")
 print(drift_speed_negz)
 
 #ANIMATION
-x_y_z_clusters=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
-data = [x_y_z_clusters]
+data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
+#data = [x_y_z_clusters]
 
 min_iterations=0
 max_iterations=10000
@@ -262,6 +251,6 @@ print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data[min_iterations:max_iterations],"Animated_clusters_TPC_0to10000.mp4",save=True,skip_iterations=min_iterations)
+animate_clusters(data,"Animated_clusters_TPC_0to10000.mp4",save=False,skip_iterations=min_iterations)
 
 #Merge using ffmpeg -f concat -safe 0 -i fileList.txt -c copy mergedVideo.mp4
