@@ -108,8 +108,8 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     ax.zaxis.line.set_color('w')
     
     #Drawing TPC
-    endcap1=Wedge((0, 0), 80, 0, 360, color='blue',alpha=0.7,zorder=1)
-    endcap2=Wedge((0, 0), 80, 0, 360, color='blue',alpha=0.7,zorder=2)
+    endcap1=Wedge((0, 0), 80, 0, 360, color='blue',alpha=0.7)
+    endcap2=Wedge((0, 0), 80, 0, 360, color='blue',alpha=0.7)
     endcap1.set_width(60)
     endcap2.set_width(60)
     
@@ -120,8 +120,8 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     art3d.pathpatch_2d_to_3d(endcap2, z=-105, zdir="z")
     
     Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
-    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.5,zorder=3)
-    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.5,zorder=4)
+    ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.5)
+    ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.5)
     
     # Setting the axes properties
     ax.set_xlim3d([-100, 100])
@@ -148,13 +148,13 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     ax.view_init(10,70,0,'y')
     
     # Initialize scatters
-    scatters = [ ax.scatter([100],[-100],[100],zorder=5) for i in range(data.shape[0])]
+    scatters = [ ax.scatter([100],[-100],[100]) for i in range(data.shape[0])]
     print("Plot initialized")
     # Number of iterations
     no_events=np.max(data[:,3])+1
     print(no_events)
     len_TPC=105.0
-    iterations = int(no_events*0.27/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
+    iterations = int(no_events*0.26/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
     print(iterations)
     iterations=50
     print("number of iterations=")
@@ -205,7 +205,7 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        branches=branches[branches.event<3]
+        branches=branches[branches.event<2]
 
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
@@ -251,6 +251,6 @@ print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data,"Animated_clusters_TPC_0to10000.mp4",save=False,skip_iterations=min_iterations)
+animate_clusters(data,"Animated_clusters_TPC_data.mp4",save=True,skip_iterations=min_iterations)
 
 #Merge using ffmpeg -f concat -safe 0 -i fileList.txt -c copy mergedVideo.mp4
