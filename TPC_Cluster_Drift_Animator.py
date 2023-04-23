@@ -9,7 +9,7 @@ from matplotlib.patches import Wedge
 import matplotlib.animation as animation
 import array
 #import time
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
 
 #/*************************************************************/
 #/*              TPC Cluster Drift Animator                  */
@@ -60,9 +60,9 @@ def theLoop(iteration,dataPoint,scatter): #dataPoint = data[i]
     if(effective_time>=0):
         effective_z = 0
         if(dataPoint[2]>0):
-            effective_z=dataPoint[2]+drift_speed_posz[2]*iteration
+            effective_z=dataPoint[2]+drift_speed_posz[2]*effective_time
         if(dataPoint[2]<0):
-            effective_z=dataPoint[2]+drift_speed_negz[2]*iteration
+            effective_z=dataPoint[2]+drift_speed_negz[2]*effective_time
         if(abs(effective_z)<(110)):
             scatter._offsets3d = (dataPoint[0:1], dataPoint[1:2], [effective_z])
             color=['r','g','b','c','m','y']
@@ -74,7 +74,7 @@ def theLoop(iteration,dataPoint,scatter): #dataPoint = data[i]
                 scatter.set_color('white')
                 scatter.set(alpha=1.0)
 
-            if(abs(effective_z)>105+2*drift_speed_posz[2]):
+            if(abs(effective_z)>105+drift_speed_posz[2]):
                 scatter._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
                 scatter.set_color('black')
                 scatter.set_sizes([10]) #= [0.1]
@@ -84,8 +84,10 @@ def theLoop(iteration,dataPoint,scatter): #dataPoint = data[i]
     return 0
     
 #Parallel processing
-def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
-    if(iteration%5==0):
+def animate_scatters(iteration, data,
+    scatters,fig_text,time_scale,iteration_time,skip_iterations):
+    iteration=iteration+skip_iterations
+    if(iteration%1==0):
         print("iteration=")
         print(iteration)
     iter_array=[iteration]*len(data)
@@ -202,17 +204,17 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     #iterations=10
     print("number of iterations=")
     print(iterations)
-    start = timer()
+    #start = timer()
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
-                                       interval=20, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
+                                       interval=100, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
     if save:
         print("Saving animation as"+animation_name)
         ani.save(animation_name,writer='ffmpeg')
         print("Animation saved")
-    end = timer()
-    print("Time for process=")
-    print(end-start)
-    plt.show()
+    #end = timer()
+    #print("Time for process=")
+    #print(end-start)
+    #plt.show()
 
 def read_cluster_pos(inFile):
     if(inFile.lower().endswith('.json')):
@@ -249,13 +251,14 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        #branches=branches[branches.event<10]
+        branches=branches[branches.event<2]
 
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
         len_events=len(np.unique(branches.event))
         event_times=[0]
         event_times=np.append(event_times,np.random.poisson(250.00,len_events-1))
+        print(event_times)
         event_times=np.cumsum(event_times,dtype=float)
         for cluster in range(len(branches)):
             gvt_event=event_times[int(branches[cluster]['event'])]
@@ -288,14 +291,11 @@ print(drift_speed_negz)
 data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
 #data = [x_y_z_clusters]
 
-min_iterations=0
-max_iterations=10000
-
 print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data,"Animated_clusters_TPC_data.mp4",save=True,skip_iterations=min_iterations)
+animate_clusters(data,"Animated_clusters_TPC_data_0to60.mp4",save=True,skip_iterations=0)
 
 
 #Merge using ffmpeg -f concat -safe 0 -i fileList.txt -c copy mergedVideo.mp4
