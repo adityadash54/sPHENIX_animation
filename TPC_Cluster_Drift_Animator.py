@@ -295,13 +295,12 @@ print(drift_speed_negz)
 
 #ANIMATION
 data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
-#data=read_cluster_pos("Data_files/TRACKS2_21March.json")
 
 print("Animation starting!")
+
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
+animate_clusters(data,"Animated_clusters_TPC.mp4",save=False,no_iterations=None,skip_iterations=0) #If you want to automatically calculate the iterations needed for the full animation set no_iterations=None
 
-animate_clusters(data,"Animated_clusters_TPC_data_10to20.mp4",save=False,no_iterations=None,skip_iterations=0) #If you want to automatically calculate the iterations needed for the full animation set no_iterations=None
 
-
-#Merge using ffmpeg -f concat -safe 0 -i filelist.txt -c copy mergedVideo.mp4
+#Merge mp4 files using ffmpeg -f concat -safe 0 -i filelist.txt -c copy mergedVideo.mp4
