@@ -55,7 +55,7 @@ def raddist_cluster(cluster_pos):
     radius=np.sqrt(cluster_pos[:,0]*cluster_pos[:,0]+cluster_pos[:,1]*cluster_pos[:,1])
     return radius
     
-def theLoop(iteration,dataPoint,scatter): #dataPoint = data[i]
+def theLoop(iteration,dataPoint,scatter):
     effective_time=iteration-dataPoint[4]
     if(effective_time>=0):
         effective_z = 0
@@ -92,8 +92,7 @@ def animate_scatters(iteration, data,
         print(iteration)
     iter_array=[iteration]*len(data)
     time=(iteration)*iteration_time/time_scale*(10**3)
-    nothing = [theLoop(iteration,da,scat) for da,scat in zip(data,scatters)]
-    #nothing=map(theLoop,iter_array,data,scatters)
+    theLoop_return = [theLoop(iteration,da,scat) for da,scat in zip(data,scatters)]
     fig_text.set_text(str(round(time,1))+"$\mu$s")
 
     return scatters,fig_text
@@ -107,9 +106,9 @@ def animate_scatters(iteration, data,
 #        effective_time=iteration-data[i,4]
 #        if(effective_time>=0):
 #            if(data[i,2]>0):
-#                effective_z=data[i,2]+drift_speed_posz[2]*iteration
+#                effective_z=data[i,2]+drift_speed_posz[2]*effective_time
 #            if(data[i,2]<0):
-#                effective_z=data[i,2]+drift_speed_negz[2]*iteration
+#                effective_z=data[i,2]+drift_speed_negz[2]*effective_time
 #            if(abs(effective_z)<(110)):
 #                scatters[i]._offsets3d = (data[i,0:1], data[i,1:2], [effective_z])
 #                color=['r','g','b','c','m','y']
@@ -133,7 +132,7 @@ def animate_scatters(iteration, data,
 #
 #    return scatters,fig_text
 
-def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,skip_iterations=0):
+def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,no_iterations=None,skip_iterations=0):
 
     # Attaching 3D axis to the figure
     fig = plt.figure(figsize=[7.5,7.5],layout='constrained')
@@ -199,14 +198,16 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     no_events=np.max(data[:,3])+1
     print(no_events)
     len_TPC=105.0
-    iterations = int(no_events*0.26/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
-    print(iterations)
-    iterations=10
+    if(no_iterations==None):
+        print("You have not input the number of iterations using no_iterations, I will calulate the maximum iterations needed for the animation")
+        iterations = int(no_events*mean_eventtime/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
+    else:
+        iterations=no_iterations
     print("number of iterations=")
     print(iterations)
     #start = timer()
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
-                                       interval=100, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
+                                       interval=iteration_time, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
     if save:
         print("Saving animation as"+animation_name)
         ani.save(animation_name,writer='ffmpeg')
@@ -214,7 +215,7 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     #end = timer()
     #print("Time for process=")
     #print(end-start)
-    #plt.show()
+    plt.show()
 
 def read_cluster_pos(inFile):
     if(inFile.lower().endswith('.json')):
@@ -235,7 +236,10 @@ def read_cluster_pos(inFile):
         for track_no in range(no_tracks):
             x_y_z_dict_track=innertracker_arr[track_no].copy() #innertracker_arr[i] reads the ith track
             x_y_z_clusters_track=np.array(x_y_z_dict_track['pts']) #2D array the x,y,z positions corresponding to each cluster e.g. x_y_z[0][0] is the x coordinate of the 1st cluster
-            x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track)>30]
+            event_and_times=np.zeros((len(x_y_z_clusters_track),1))
+            x_y_z_clusters_track=np.append(x_y_z_clusters_track,event_and_times,axis=1)
+            x_y_z_clusters_track=np.append(x_y_z_clusters_track,event_and_times,axis=1)
+            x_y_z_clusters_track=x_y_z_clusters_track[raddist_cluster(x_y_z_clusters_track[:,:2])>30]
     
             if(track_no==0):
                 x_y_z_clusters=np.copy(x_y_z_clusters_track)
@@ -251,13 +255,13 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        #branches=branches[branches.event<2]
+        branches=branches[branches.event<2]
 
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
         len_events=len(np.unique(branches.event))
         event_times=[0]
-        event_times=np.append(event_times,np.random.poisson(250.00,len_events-1))
+        event_times=np.append(event_times,np.random.poisson(mean_eventtime*1000,len_events-1))
         print(event_times)
         event_times=np.cumsum(event_times,dtype=float)
         for cluster in range(len(branches)):
@@ -279,6 +283,8 @@ print("Generating data for animation")
 #User defined values
 time_scale=4.0*(10.0**5) #inverse of speed scale
 iteration_time=100.0 #20ms
+collision_rate=4.0 #MHz
+mean_eventtime=1/collision_rate
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
 drift_speed_negz=np.array([0.0,0.0,-TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
@@ -289,13 +295,13 @@ print(drift_speed_negz)
 
 #ANIMATION
 data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
-#data = [x_y_z_clusters]
+#data=read_cluster_pos("Data_files/TRACKS2_21March.json")
 
 print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data,"Animated_clusters_TPC_data_10to20.mp4",save=True,skip_iterations=10)
+animate_clusters(data,"Animated_clusters_TPC_data_10to20.mp4",save=False,no_iterations=None,skip_iterations=0) #If you want to automatically calculate the iterations needed for the full animation set no_iterations=None
 
 
 #Merge using ffmpeg -f concat -safe 0 -i filelist.txt -c copy mergedVideo.mp4
