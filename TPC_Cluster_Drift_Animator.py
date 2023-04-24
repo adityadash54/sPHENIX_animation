@@ -91,10 +91,10 @@ def animate_scatters(iteration, data,
         print("iteration=")
         print(iteration)
     iter_array=[iteration]*len(data)
-    time=(iteration+skip_iterations)*iteration_time/time_scale*(10**3)
+    time=(iteration)*iteration_time/time_scale*(10**3)
     nothing = [theLoop(iteration,da,scat) for da,scat in zip(data,scatters)]
     #nothing=map(theLoop,iter_array,data,scatters)
-    fig_text.set_text(str(round(time,2))+"$\mu$s")
+    fig_text.set_text(str(round(time,1))+"$\mu$s")
 
     return scatters,fig_text
     
@@ -201,12 +201,12 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     len_TPC=105.0
     iterations = int(no_events*0.26/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
     print(iterations)
-    #iterations=10
+    iterations=10
     print("number of iterations=")
     print(iterations)
     #start = timer()
     ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
-                                       interval=100, blit=False, repeat=True) #interval is in milliseconds and is the time between each frame
+                                       interval=100, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
     if save:
         print("Saving animation as"+animation_name)
         ani.save(animation_name,writer='ffmpeg')
@@ -251,7 +251,7 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        branches=branches[branches.event<2]
+        #branches=branches[branches.event<2]
 
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
@@ -295,7 +295,7 @@ print("Animation starting!")
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
 
-animate_clusters(data,"Animated_clusters_TPC_data_0to60.mp4",save=True,skip_iterations=0)
+animate_clusters(data,"Animated_clusters_TPC_data_10to20.mp4",save=True,skip_iterations=10)
 
 
-#Merge using ffmpeg -f concat -safe 0 -i fileList.txt -c copy mergedVideo.mp4
+#Merge using ffmpeg -f concat -safe 0 -i filelist.txt -c copy mergedVideo.mp4
