@@ -63,21 +63,21 @@ def theLoop(iteration,dataPoint,scatter):
             effective_z=dataPoint[2]+drift_speed_posz[2]*effective_time
         if(dataPoint[2]<0):
             effective_z=dataPoint[2]+drift_speed_negz[2]*effective_time
-        if(abs(effective_z)<(110)):
+        if(abs(effective_z)<len_TPC+drift_speed_posz[2]):
             scatter._offsets3d = (dataPoint[0:1], dataPoint[1:2], [effective_z])
             color=['r','g','b','c','m','y']
 
             if(abs(effective_z)<len_TPC):
                 scatter.set_color(color[int(dataPoint[3]%6)])
 
-            if(abs(effective_z)>=len_TPC and abs(effective_z)<len_TPC+drift_speed_posz[2]):
+            if(abs(effective_z)>=len_TPC):
                 scatter.set_color('white')
                 scatter.set(alpha=1.0)
 
-            if(abs(effective_z)>len_TPC+drift_speed_posz[2]):
+        if(abs(effective_z)>=len_TPC+drift_speed_posz[2]):
                 scatter._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
                 scatter.set_color('black')
-                scatter.set_sizes([10]) #= [0.1]
+                scatter.set_sizes([10])
     else:
         scatter._offsets3d = ([100], [-100], [100]) #clusters from event not yet taken place
         scatter.set_color('black')
@@ -109,21 +109,21 @@ def animate_scatters(iteration, data,
 #                effective_z=data[i,2]+drift_speed_posz[2]*effective_time
 #            if(data[i,2]<0):
 #                effective_z=data[i,2]+drift_speed_negz[2]*effective_time
-#            if(abs(effective_z)<(110)):
+#            if(abs(effective_z)<len_TPC+drift_speed_posz[2]):
 #                scatters[i]._offsets3d = (data[i,0:1], data[i,1:2], [effective_z])
 #                color=['r','g','b','c','m','y']
 #
 #                if(abs(effective_z)<len_TPC):
 #                    scatters[i].set_color(color[int(data[i,3]%6)])
 #
-#                if(abs(effective_z)>=len_TPC and abs(effective_z)<len_TPC+drift_speed_posz[2]):
+#                if(abs(effective_z)>=len_TPC):
 #                    scatters[i].set_color('white')
 #                    scatters[i].set(alpha=1.0)
 #
-#                if(abs(effective_z)>len_TPC+2*drift_speed_posz[2]):
+#            if(abs(effective_z)>=len_TPC+2*drift_speed_posz[2]):
 #                    scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
 #                    scatters[i].set_color('black')
-#                    scatters[i].set_sizes([10]) #= [0.1]
+#                    scatters[i].set_sizes([10])
 #        else:
 #            scatters[i]._offsets3d = ([100], [-100], [100]) #clusters from event not yet taken place
 #            scatters[i].set_color('black')
