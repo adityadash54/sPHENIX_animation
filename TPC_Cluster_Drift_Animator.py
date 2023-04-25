@@ -18,7 +18,7 @@ import array
 #/*************************************************************/
 #Code in python
 #Input:
-# root or json file containing TPC clusters
+# root or json file containing TPC cluster positions
 #Output:
 # Animation of drifting of TPC clusters with user defined speed and option to save in .mp4 format
 
@@ -85,8 +85,8 @@ def theLoop(iteration,dataPoint,scatter):
     
 #Parallel processing
 def animate_scatters(iteration, data,
-    scatters,fig_text,time_scale,iteration_time,skip_iterations):
-    iteration=iteration+skip_iterations
+    scatters,fig_text,time_scale,iteration_time,start_iteration):
+    iteration=iteration+start_iteration
     if(iteration%1==0):
         print("iteration=")
         print(iteration)
@@ -98,11 +98,11 @@ def animate_scatters(iteration, data,
     return scatters,fig_text
     
 #Normal Processing
-#def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,skip_iterations):
+#def animate_scatters(iteration, data, scatters,fig_text,time_scale,iteration_time,start_iteration):
 #    print("iteration=")
 #    print(iteration)
 #    for i in range(data.shape[0]):
-#        time=(iteration+skip_iterations)*iteration_time/time_scale*(10**3)
+#        time=(iteration+start_iteration)*iteration_time/time_scale*(10**3)
 #        effective_time=iteration-data[i,4]
 #        if(effective_time>=0):
 #            if(data[i,2]>0):
@@ -132,7 +132,7 @@ def animate_scatters(iteration, data,
 #
 #    return scatters,fig_text
 
-def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,no_iterations=None,skip_iterations=0):
+def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,start_iteration=0,no_iterations=1):
 
     # Attaching 3D axis to the figure
     fig = plt.figure(figsize=[7.5,7.5],layout='constrained')
@@ -160,10 +160,10 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     ax.add_artist(endcap1)
     ax.add_artist(endcap2)
     
-    art3d.pathpatch_2d_to_3d(endcap1, z=105, zdir="z")
-    art3d.pathpatch_2d_to_3d(endcap2, z=-105, zdir="z")
+    art3d.pathpatch_2d_to_3d(endcap1, z=len_TPC, zdir="z")
+    art3d.pathpatch_2d_to_3d(endcap2, z=-len_TPC, zdir="z")
     
-    Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,105)
+    Xc_in,Yc_in,Xc_out,Yc_out,Zc = TPC_surface(20,80,len_TPC)
     ax.plot_surface(Xc_in, Yc_in, Zc, alpha=0.5)
     ax.plot_surface(Xc_out, Yc_out, Zc, alpha=0.5)
     
@@ -188,25 +188,14 @@ def animate_clusters(data,animation_name="Animated_clusters_TPC.mp4",save=False,
     fig_text_sPhenix=ax.text(-100,110,100,  'p+p, $\sqrt{s_{NN}}$ = 200 GeV, 4MHz', size=10,color='w',alpha=0.9)
     
     
-    # Provide starting angle for the view.
+    # Providing the starting angle for the view
     ax.view_init(10,70,0,'y')
     
-    # Initialize scatters
+    # Initializing scatters
     scatters = [ ax.scatter([100],[-100],[100]) for i in range(data.shape[0])]
     print("Plot initialized")
-    # Number of iterations
-    no_events=np.max(data[:,3])+1
-    print(no_events)
-    len_TPC=105.0
-    if(no_iterations==None):
-        print("You have not input the number of iterations using no_iterations, I will calulate the maximum iterations needed for the animation")
-        iterations = int(no_events*mean_eventtime/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])
-    else:
-        iterations=no_iterations
-    print("number of iterations=")
-    print(iterations)
     #start = timer()
-    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,skip_iterations),
+    ani = animation.FuncAnimation(fig, animate_scatters, iterations, fargs=(data, scatters,fig_text,time_scale,iteration_time,start_iteration),
                                        interval=iteration_time, blit=False, repeat=False) #interval is in milliseconds and is the time between each frame
     if save:
         print("Saving animation as"+animation_name)
@@ -282,10 +271,12 @@ print("Generating data for animation")
 
 #User defined values
 time_scale=4.0*(10.0**5) #inverse of speed scale
-iteration_time=100.0 #20ms
 collision_rate=4.0 #MHz
 mean_eventtime=1/collision_rate
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
+iteration_time=100.0 #actual duration between frames in FuncAnimation
+len_TPC=105.0
+
 drift_speed_posz=np.array([0.0,0.0,TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
 drift_speed_negz=np.array([0.0,0.0,-TPC_drift_speed/time_scale*iteration_time,0.0,0.0])
 print("drift_speed_posz(cm/iteration)=")
@@ -296,11 +287,21 @@ print(drift_speed_negz)
 #ANIMATION
 data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
 
+# Number of iterations
+no_events=np.max(data[:,3])+1
+print("no_events=")
+print(no_events)
+
+iterations = int(no_events*mean_eventtime/1000*time_scale/iteration_time+len_TPC/drift_speed_posz[2])+5
+#iterations=10
+
+print("number of iterations=")
+print(iterations)
 print("Animation starting!")
 
 #Saving takes a long time so use Save=True only when necessary
 #increase drift_speed_posz and drift_speed_negz if desired
-animate_clusters(data,"Animated_clusters_TPC.mp4",save=False,no_iterations=None,skip_iterations=0) #If you want to automatically calculate the iterations needed for the full animation set no_iterations=None
+animate_clusters(data,"Animated_clusters_TPC.mp4",save=True,start_iteration=0,no_iterations=iterations)
 
 
 #Merge mp4 files using ffmpeg -f concat -safe 0 -i filelist.txt -c copy mergedVideo.mp4
