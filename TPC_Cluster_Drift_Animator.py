@@ -244,7 +244,7 @@ def read_cluster_pos(inFile):
         branches=ntp_cluster_tree.arrays(["x","y","z","event","gvt"])
         branches=branches[~np.isnan(branches.gvt)]
         branches=branches[((branches.x)**2+(branches.y)**2)>900]
-        branches=branches[branches.event<2]
+        #branches=branches[branches.event<2]
 
         print("Reading clusters")
         x_y_z_clusters_run=np.array([])
@@ -285,7 +285,7 @@ print("drift_speed_negz(cm/iteration)=")
 print(drift_speed_negz)
 
 #ANIMATION
-data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval_19April.root")
+data=read_cluster_pos("G4sPHENIX_g4svtx_eval_pp200events.root")
 
 # Number of iterations
 no_events=np.max(data[:,3])+1
