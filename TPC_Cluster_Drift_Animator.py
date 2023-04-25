@@ -67,14 +67,14 @@ def theLoop(iteration,dataPoint,scatter):
             scatter._offsets3d = (dataPoint[0:1], dataPoint[1:2], [effective_z])
             color=['r','g','b','c','m','y']
 
-            if(abs(effective_z)<105):
+            if(abs(effective_z)<len_TPC):
                 scatter.set_color(color[int(dataPoint[3]%6)])
 
-            if(abs(effective_z)>=105 and abs(effective_z)<105+drift_speed_posz[2]):
+            if(abs(effective_z)>=len_TPC and abs(effective_z)<len_TPC+drift_speed_posz[2]):
                 scatter.set_color('white')
                 scatter.set(alpha=1.0)
 
-            if(abs(effective_z)>105+drift_speed_posz[2]):
+            if(abs(effective_z)>len_TPC+drift_speed_posz[2]):
                 scatter._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
                 scatter.set_color('black')
                 scatter.set_sizes([10]) #= [0.1]
@@ -113,14 +113,14 @@ def animate_scatters(iteration, data,
 #                scatters[i]._offsets3d = (data[i,0:1], data[i,1:2], [effective_z])
 #                color=['r','g','b','c','m','y']
 #
-#                if(abs(effective_z)<105):
+#                if(abs(effective_z)<len_TPC):
 #                    scatters[i].set_color(color[int(data[i,3]%6)])
 #
-#                if(abs(effective_z)>=105 and abs(effective_z)<105+drift_speed_posz[2]):
+#                if(abs(effective_z)>=len_TPC and abs(effective_z)<len_TPC+drift_speed_posz[2]):
 #                    scatters[i].set_color('white')
 #                    scatters[i].set(alpha=1.0)
 #
-#                if(abs(effective_z)>105+2*drift_speed_posz[2]):
+#                if(abs(effective_z)>len_TPC+2*drift_speed_posz[2]):
 #                    scatters[i]._offsets3d = ([100], [-100], [100]) #to plot all points outside TPC at one point
 #                    scatters[i].set_color('black')
 #                    scatters[i].set_sizes([10]) #= [0.1]
@@ -271,7 +271,7 @@ print("Generating data for animation")
 
 #User defined values
 time_scale=4.0*(10.0**5) #inverse of speed scale
-collision_rate=4.0 #MHz
+collision_rate=4.0 #MHz #Set fig_text_sPhenix in line 188
 mean_eventtime=1/collision_rate
 TPC_drift_speed=8.0*(10.0**3) #Actual TPC drift speed =8cm/microsecond=8*10^3cm/millisecond
 iteration_time=100.0 #actual duration between frames in FuncAnimation
@@ -285,7 +285,7 @@ print("drift_speed_negz(cm/iteration)=")
 print(drift_speed_negz)
 
 #ANIMATION
-data=read_cluster_pos("G4sPHENIX_g4svtx_eval.root")
+data=read_cluster_pos("Data_files/G4sPHENIX_g4svtx_eval.root")
 
 # Number of iterations
 no_events=np.max(data[:,3])+1
