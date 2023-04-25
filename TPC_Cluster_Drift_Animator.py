@@ -285,7 +285,7 @@ print("drift_speed_negz(cm/iteration)=")
 print(drift_speed_negz)
 
 #ANIMATION
-data=read_cluster_pos("G4sPHENIX_g4svtx_eval_pp200events.root")
+data=read_cluster_pos("G4sPHENIX_g4svtx_eval.root")
 
 # Number of iterations
 no_events=np.max(data[:,3])+1
